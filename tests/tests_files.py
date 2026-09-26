@@ -6,7 +6,7 @@ import sys
 from datetime import datetime, timedelta
 import time as time_module
 
-from pyshellscript import *
+from os_script import *
 
 
 class TestFileCopyFunctions(unittest.TestCase):

@@ -1,5 +1,5 @@
 import unittest
-from pyshellscript import *
+from os_script import *
 from datetime import datetime, date, time
 from typing import Union, List, Optional
 

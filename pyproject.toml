@@ -3,8 +3,8 @@ requires = ["setuptools"]
 build-backend = "setuptools.build_meta"
 
 [project]
-name = "pyshellscript"
-# change in the "pyshellscript/pyshellscript.py" file: `def pyshellscript_version():`
+name = "os_script"
+# change in the "os_script/os_script.py" file: `def os_script_version():`
 # and run "build_and_install.py"
 version = "0.5.3"
 requires-python = ">=3.3"
@@ -23,9 +23,9 @@ dependencies = [
 ]
 
 [project.urls]
-Homepage = "https://github.com/heX16/pyshellscript"
-Repository = "https://github.com/heX16/pyshellscript"
-Issues = "https://github.com/heX16/pyshellscript/issues"
+Homepage = "https://github.com/heX16/os-script"
+Repository = "https://github.com/heX16/os-script"
+Issues = "https://github.com/heX16/os-script/issues"
 
 [project.optional-dependencies]
 dev = [

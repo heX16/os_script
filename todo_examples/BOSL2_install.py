@@ -10,10 +10,10 @@ import zipfile
 from pathlib import Path
 
 try:
-    from pyshellscript import *
+    from os_script import *
 except ImportError:
-    sys.path.insert(0, r'H:\Pyt\pyshellscript')
-    from pyshellscript import *
+    sys.path.insert(0, r'H:\Pyt\os-script')
+    from os_script import *
 
 BOSL2_ZIP_URL = 'https://github.com/BelfrySCAD/BOSL2/archive/refs/heads/master.zip'
 

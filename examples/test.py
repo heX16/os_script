@@ -1,18 +1,18 @@
-from pyshellscript import *
-# import pyshellscript
+from os_script import *
+# import os_script
 
 
-#print(dir(pyshellscript))
+#print(dir(os_script))
 #print(globals())
 #print(now)
 #print(find)
-#print(pyshellscript.find)
+#print(os_script.find)
 #print(run_command)
 
 for f in find('./', '*.*', recursively=True):
     if str(get_filename(f)).startswith('te'):
         print('file:', f)
-        #pyshellscript.rename..
+        #os_script.rename..
 
 # pipe example
 

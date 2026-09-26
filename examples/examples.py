@@ -1,4 +1,4 @@
-from pyshellscript import *
+from os_script import *
 
 def print_process_list_example(process_list, print_format="{:<8} {:<30} {:<10} {}"):
     """

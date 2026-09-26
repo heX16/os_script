@@ -1,18 +1,18 @@
-# Note: For obvious reasons, this file does not use `pyshellscript` library functions.
+# Note: For obvious reasons, this file does not use `os_script` library functions.
 
 import subprocess
 import re
 from pathlib import Path
 
 # Path to the target Python file
-file_path = Path('pyshellscript/pyshellscript.py')
+file_path = Path('os_script/os_script.py')
 
 # Read all lines from the file
 lines = file_path.read_text().splitlines()
 
 try:
     # Find the index of the target function definition
-    index = lines.index('def pyshellscript_version():')
+    index = lines.index('def os_script_version():')
     # Get the line immediately following the target line
     version_line = lines[index + 1]
 
@@ -21,7 +21,7 @@ try:
     match = re.search(r"return\s+'([\d.]+)'", version_line)
     if match:
         version = match.group(1)
-        print('Version "pyshellscript":', version)
+        print('Version "os_script":', version)
     else:
         print('No version found')
         exit(1)
@@ -60,7 +60,7 @@ else:
 
 # Extract the updated version from pyproject.toml
 dist_dir = Path('dist')
-wheel_file = dist_dir / f'pyshellscript-{version}-py3-none-any.whl'
+wheel_file = dist_dir / f'os_script-{version}-py3-none-any.whl'
 
 # Build the project
 subprocess.run(['pip', 'install', 'build'])

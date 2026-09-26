@@ -26,7 +26,7 @@ except ImportError:
 
 # Base ################################################################
 
-def pyshellscript_version():
+def os_script_version():
     return '0.5.3'
 
 
