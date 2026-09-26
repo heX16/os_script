@@ -1,4 +1,4 @@
-Новое имя: `os-script` - operation system script.
+Новое имя: `os_script` - operation system script.
 
 
 Старое название: `pyshellscript`
