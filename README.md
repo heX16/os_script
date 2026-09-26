@@ -1,2 +1,2 @@
 # os_script
-Library for shell scripting in Python
+Library for operation system scripting in Python
