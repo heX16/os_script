@@ -6,7 +6,7 @@ build-backend = "setuptools.build_meta"
 name = "os_script"
 # change in the "os_script/os_script.py" file: `def os_script_version():`
 # and run "build_and_install.py"
-version = "0.5.3"
+version = "0.5.4"
 requires-python = ">=3.3"
 description = "Library for shell scripting in Python"
 authors = [{name = "heX", email = "hex1625616@gmail.com"}]
@@ -33,6 +33,10 @@ dev = [
   "black",
   "isort"
 ]
+
+[tool.setuptools.packages.find]
+include = ["os_script*"]
+exclude = ["todo*", "tests*", "examples*", "_other*"]
 
 [tool.black]
 line-length = 88
