@@ -7,3 +7,16 @@
 
 **`os-sys`** — сторонний пакет в PyPI, который добавляет декоративные элементы (прогресс-бары, спиннеры в терминале) для консольных скриптов.
 
+----------------
+
+- [ ] os_script: реализовать поддержку получения списка физических дисков через `wmic diskdrive` (Windows):
+      - вот тут готовый код:
+        `D:\heXor\App\heX\autorun_hex\disk_list.py`
+        `os_script\todo\disk_list.py`
+      - Написать функцию парсинга сырых данных команды  
+        `wmic diskdrive get deviceid, model, size, serialnumber /format:value`
+        в структуру `list[dict]` с полями `DeviceID`, `Model`, `SerialNumber`, `Size`,
+        а также рассчитанными `SizeGB` и `SizeStrGB`.
+      - Написать функцию верхнего уровня `get_physical_disks_wmic()`, которая вызывает `run_command`,
+        парсит вывод с помощью функции выше и возвращает список дисков.
+
