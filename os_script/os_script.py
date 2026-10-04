@@ -633,6 +633,215 @@ def copy_file_with_progress(source_path: Path | str, destination_path: Path | st
         # TODO: set_file_create_time(destination_path, get_file_create_time(source_path))
 
 
+def copy_file_write_changed_blocks(
+        source_path: Path | str,
+        destination_path: Path | str,
+        *,
+        block_size: int = 4 * 1024,
+        group_blocks: int = 64,
+        follow_symlinks: bool = True,
+        callback: Optional[Callable] = None,
+        callback_user_data: Optional[Dict] = None,
+        callback_print_progress: Optional[Callable] = None,
+        update_metadata: bool = True,
+) -> Dict[str, int]:
+    """
+    Copy a file, writing only blocks that differ when destination already exists.
+
+    Modes:
+    - Destination does not exist: full copy via `copy_file_with_progress`.
+    - Destination exists and sizes differ: full copy via `copy_file_with_progress`.
+    - Destination exists and sizes are equal: in-place compare-and-write mode.
+      Reads both files in groups (`block_size * group_blocks`), compares chunks,
+      and overwrites only changed `block_size` ranges (merged into contiguous writes).
+
+    Purpose:
+    Reduce unnecessary disk writes (HDD/SSD wear, copy-on-write filesystem churn)
+    when updating a file that mostly matches the source.
+
+    Notes / limitations:
+    - Extra destination reads make this less suitable for slow/network destinations.
+    - In-place mode is not atomic: a crash may leave a partially updated destination.
+    - If destination is a directory, the target file is `destination / source.name`
+      (same convention as `copy_file`).
+    - When files are identical in in-place mode, metadata is left unchanged even if
+      `update_metadata=True` (to avoid needless writes).
+
+    :param source_path: Path to the source file.
+    :param destination_path: Path to the destination file or directory.
+    :param block_size: Compare/write granularity in bytes. Default: 4 KiB.
+    :param group_blocks: Number of blocks read as one compare group. Default: 64 (256 KiB).
+    :param follow_symlinks: Whether to follow symlinks (passed to full-copy fallback).
+    :param callback: Optional callback (same prototype as `copy_file_with_progress`).
+    :param callback_user_data: Data for the custom callback function.
+    :param callback_print_progress: Optional progress printer (default: `print_copy_progress`).
+    :param update_metadata: If True, copy source metadata after a real write/full copy.
+    :return: Stats dict with keys:
+        `bytes_total`, `bytes_scanned`, `bytes_written`, `blocks_total`, `blocks_written`.
+
+    callback prototype:
+    `def print_copy_progress(data: bytes, data_len: int, copied_size: int, file_size: int,
+                        user_data: Any, error_code: int) -> None`
+    """
+    source_path = Path(source_path)
+    destination_path = Path(destination_path)
+
+    if block_size <= 0:
+        raise ValueError('`block_size` must be a positive integer.')
+    if group_blocks <= 0:
+        raise ValueError('`group_blocks` must be a positive integer.')
+
+    if not source_path.is_file() and not (follow_symlinks is False and source_path.is_symlink()):
+        if not source_path.exists():
+            raise FileNotFoundError(f'The source file {source_path} does not exist.')
+        if not source_path.is_file():
+            raise FileNotFoundError(f'The source file {source_path} does not exist or is not a file.')
+
+    # If destination is a directory, place the file inside it (like `copy_file`).
+    if destination_path.is_dir():
+        destination_path = destination_path / source_path.name
+
+    def _empty_stats(total: int = 0) -> Dict[str, int]:
+        return {
+            'bytes_total': total,
+            'bytes_scanned': 0,
+            'bytes_written': total,
+            'blocks_total': 0,
+            'blocks_written': 0,
+        }
+
+    def _full_copy_stats(total: int) -> Dict[str, int]:
+        # Full rewrite path: treat every byte as written; scan counter unused.
+        return {
+            'bytes_total': total,
+            'bytes_scanned': 0,
+            'bytes_written': total,
+            'blocks_total': (total + block_size - 1) // block_size if total else 0,
+            'blocks_written': (total + block_size - 1) // block_size if total else 0,
+        }
+
+    # Symlink-as-link fallback (same behavior as copy_file_with_progress).
+    if not follow_symlinks and source_path.is_symlink():
+        if destination_path.exists():
+            if destination_path.is_symlink() or destination_path.is_file():
+                destination_path.unlink()
+            else:
+                raise IsADirectoryError(f'Cannot replace directory with symlink: {destination_path}')
+        destination_path.symlink_to(source_path.readlink())
+        return _empty_stats(0)
+
+    source_size = source_path.stat().st_size
+    dest_exists = destination_path.exists()
+
+    use_inplace = (
+        dest_exists
+        and destination_path.is_file()
+        and destination_path.stat().st_size == source_size
+    )
+
+    if not use_inplace:
+        copy_file_with_progress(
+            source_path,
+            destination_path,
+            follow_symlinks=follow_symlinks,
+            callback=callback,
+            callback_user_data=callback_user_data,
+            callback_print_progress=callback_print_progress,
+        )
+        # `copy_file_with_progress` always updates metadata via copystat.
+        # Honor update_metadata=False by restoring destination mtime/atime if needed
+        # would be complex after overwrite; for full-copy path we keep current behavior
+        # of copy_file_with_progress (metadata always copied there).
+        return _full_copy_stats(source_size)
+
+    # In-place compare-and-write mode (equal sizes).
+    group_size = block_size * group_blocks
+    bytes_scanned = 0
+    bytes_written = 0
+    blocks_total = (source_size + block_size - 1) // block_size if source_size else 0
+    blocks_written = 0
+
+    if callback_print_progress is None:
+        callback_print_progress = print_copy_progress
+    callback_print_data = {'last_print_time': 0.0}
+
+    def _notify_progress(data: bytes, data_len: int, scanned: int) -> None:
+        if callback_print_progress:
+            callback_print_progress(data, data_len, scanned, source_size, callback_print_data, 0)
+        if callback:
+            callback(data, data_len, scanned, source_size, callback_user_data, 0)
+
+    with source_path.open('rb') as source_file, destination_path.open('r+b') as destination_file:
+        while True:
+            src_chunk = source_file.read(group_size)
+            if not src_chunk:
+                break
+            dst_chunk = destination_file.read(len(src_chunk))
+            chunk_offset = bytes_scanned
+            bytes_scanned += len(src_chunk)
+
+            if src_chunk == dst_chunk:
+                _notify_progress(src_chunk, 0, bytes_scanned)
+                continue
+
+            # Differs: compare block-by-block and merge contiguous dirty ranges.
+            write_start: Optional[int] = None
+            write_end: Optional[int] = None
+
+            def _flush_range() -> None:
+                nonlocal bytes_written, blocks_written, write_start, write_end
+                if write_start is None or write_end is None:
+                    return
+                length = write_end - write_start
+                relative_start = write_start - chunk_offset
+                data_to_write = src_chunk[relative_start:relative_start + length]
+                destination_file.seek(write_start)
+                destination_file.write(data_to_write)
+                bytes_written += length
+                blocks_written += (length + block_size - 1) // block_size
+                _notify_progress(data_to_write, length, bytes_scanned)
+                write_start = None
+                write_end = None
+
+            pos = 0
+            chunk_len = len(src_chunk)
+            while pos < chunk_len:
+                end = min(pos + block_size, chunk_len)
+                if src_chunk[pos:end] != dst_chunk[pos:end]:
+                    abs_start = chunk_offset + pos
+                    abs_end = chunk_offset + end
+                    if write_start is None:
+                        write_start = abs_start
+                        write_end = abs_end
+                    elif write_end == abs_start:
+                        write_end = abs_end
+                    else:
+                        _flush_range()
+                        write_start = abs_start
+                        write_end = abs_end
+                else:
+                    _flush_range()
+                pos = end
+
+            _flush_range()
+            # Keep destination file position aligned for the next sequential group read.
+            destination_file.seek(bytes_scanned)
+
+        # Final progress tick (same convention as copy_file_with_progress).
+        _notify_progress(b'', 0, source_size)
+
+    if update_metadata and bytes_written > 0:
+        shutil.copystat(source_path, destination_path, follow_symlinks=follow_symlinks)
+
+    return {
+        'bytes_total': source_size,
+        'bytes_scanned': bytes_scanned,
+        'bytes_written': bytes_written,
+        'blocks_total': blocks_total,
+        'blocks_written': blocks_written,
+    }
+
+
 def format_bytes(byte_count, kibi=False):
     level = ' B'
     i = '' if not kibi else 'i'

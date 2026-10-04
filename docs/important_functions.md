@@ -35,6 +35,7 @@
 - `copy_file`
 - `copy_files`
 - `copy_file_with_progress`
+- `copy_file_write_changed_blocks`
 - `mv`
 - `rm`
 - `rmdir`

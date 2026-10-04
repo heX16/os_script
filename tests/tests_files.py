@@ -230,6 +230,103 @@ class TestFileCopyFunctions(unittest.TestCase):
         with self.assertRaises(TypeError):
             format_bytes('not a number')
 
+    def test_copy_file_write_changed_blocks_new_file(self):
+        # Destination does not exist -> full copy
+        source_file = self.source_dir / 'file1.txt'
+        destination_file = self.destination_dir / 'new_delta_copy.txt'
+        self.assertFalse(destination_file.exists())
+
+        stats = copy_file_write_changed_blocks(
+            source_file,
+            destination_file,
+            callback_print_progress=lambda *args: None,
+        )
+
+        self.assertTrue(destination_file.exists())
+        self.assertEqual(source_file.read_bytes(), destination_file.read_bytes())
+        self.assertEqual(stats['bytes_total'], source_file.stat().st_size)
+        self.assertEqual(stats['bytes_written'], source_file.stat().st_size)
+
+    def test_copy_file_write_changed_blocks_same_size_updates_only_differences(self):
+        # Same size, differing middle block -> destination becomes equal to source
+        block_size = 4 * 1024
+        source_data = bytearray(b'A' * (block_size * 3))
+        dest_data = bytearray(source_data)
+        # Change one full middle block in destination
+        dest_data[block_size:block_size * 2] = b'B' * block_size
+
+        source_file = self.source_dir / 'delta_src.bin'
+        destination_file = self.destination_dir / 'delta_dst.bin'
+        source_file.write_bytes(source_data)
+        destination_file.write_bytes(dest_data)
+
+        stats = copy_file_write_changed_blocks(
+            source_file,
+            destination_file,
+            block_size=block_size,
+            group_blocks=1,
+            callback_print_progress=lambda *args: None,
+        )
+
+        self.assertEqual(destination_file.read_bytes(), bytes(source_data))
+        self.assertEqual(stats['bytes_scanned'], len(source_data))
+        self.assertEqual(stats['bytes_written'], block_size)
+        self.assertEqual(stats['blocks_written'], 1)
+
+    def test_copy_file_write_changed_blocks_same_size_no_changes(self):
+        # Identical files -> no writes and destination mtime stays the same
+        source_file = self.source_dir / 'same_src.bin'
+        destination_file = self.destination_dir / 'same_dst.bin'
+        payload = b'X' * (8 * 1024)
+        source_file.write_bytes(payload)
+        destination_file.write_bytes(payload)
+
+        original_mtime = destination_file.stat().st_mtime
+        time_module.sleep(1.1)
+
+        stats = copy_file_write_changed_blocks(
+            source_file,
+            destination_file,
+            callback_print_progress=lambda *args: None,
+        )
+
+        self.assertEqual(stats['bytes_written'], 0)
+        self.assertEqual(stats['blocks_written'], 0)
+        self.assertEqual(stats['bytes_scanned'], len(payload))
+        self.assertEqual(destination_file.read_bytes(), payload)
+        self.assertEqual(destination_file.stat().st_mtime, original_mtime)
+
+    def test_copy_file_write_changed_blocks_size_diff_fallback(self):
+        # Different sizes -> full overwrite fallback
+        source_file = self.source_dir / 'size_src.txt'
+        destination_file = self.destination_dir / 'size_dst.txt'
+        source_file.write_text('new content that is longer')
+        destination_file.write_text('old')
+
+        stats = copy_file_write_changed_blocks(
+            source_file,
+            destination_file,
+            callback_print_progress=lambda *args: None,
+        )
+
+        self.assertEqual(destination_file.read_text(), source_file.read_text())
+        self.assertEqual(stats['bytes_written'], source_file.stat().st_size)
+        self.assertEqual(stats['bytes_scanned'], 0)
+
+    def test_copy_file_write_changed_blocks_destination_is_dir(self):
+        # Destination path is a directory -> copy into that directory
+        source_file = self.source_dir / 'file2.txt'
+        stats = copy_file_write_changed_blocks(
+            source_file,
+            self.destination_dir,
+            callback_print_progress=lambda *args: None,
+        )
+
+        destination_file = self.destination_dir / source_file.name
+        self.assertTrue(destination_file.exists())
+        self.assertEqual(source_file.read_text(), destination_file.read_text())
+        self.assertEqual(stats['bytes_total'], source_file.stat().st_size)
+
 
 class TestFileTimeFunctions(unittest.TestCase):
     test_dir = Path('file_time_tests')
