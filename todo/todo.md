@@ -1,4 +1,19 @@
 
+# выполнение комманд - `sh` `run_command`
+
+нужно изменить поведение и переименовать.
+
+`sh` - запускает одну команду (одну строку).
+
+ `run_commands` - запускает множество команды в мульти линии.
+
+# выполнение комманд - pipe
+
+добавить поддержку pipe и операций перенаправления ввода вывода `>>`.
+
+`std_in_out_pipe_as_bash_test.py`
+`string_process_std_in_out_test.py`
+
 # Единая API для `set/get_file_*_time`
 
 Единая API для `set/get_file_*_time`: выровнять поведение/исключения и документацию у связанных функций (set_file_write_time, возможно get_file_create_time) под текущие правила.
@@ -21,7 +36,7 @@
       - вот тут готовый код:
         `D:\heXor\App\heX\autorun_hex\disk_list.py`
         `os_script\todo\disk_list.py`
-      - Написать функцию парсинга сырых данных команды  
+      - Написать функцию парсинга сырых данных команды
         `wmic diskdrive get deviceid, model, size, serialnumber /format:value`
         в структуру `list[dict]` с полями `DeviceID`, `Model`, `SerialNumber`, `Size`,
         а также рассчитанными `SizeGB` и `SizeStrGB`.
