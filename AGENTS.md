@@ -11,18 +11,15 @@ Brief guide for AI agents working in this repository.
 - process listing/inspection (via `psutil`)
 - datetime parsing/formatting and small text/config utilities
 
-See [`docs/usage.md`](docs/usage.md) for typical import usage.
-
 ## Documentation map
 
-There is no separate Sphinx/MkDocs site. Prefer these sources, in order:
+There is no separate Sphinx/MkDocs site. Prefer these sources:
 
-1. [`README.md`](README.md) — one-line project overview.
-2. [`docs/usage.md`](docs/usage.md) — typical usage.
-3. [`docs/important_functions.md`](docs/important_functions.md) — grouped index of commonly used functions (names only).
-4. [`os_script/os_script.py`](os_script/os_script.py) — **primary source of truth**: docstrings and section headers (`# Files`, `# Run`, `# Proc`, `# Date time`, etc.).
-5. [`tests/tests_files.py`](tests/tests_files.py) and [`tests/tests_datetime.py`](tests/tests_datetime.py) — executable specification of expected behavior.
-6. [`examples/`](examples) — usage snippets (`examples.py`, `test.py`).
+- [`README.md`](README.md) — one-line project overview.
+- [`docs/important_functions.md`](docs/important_functions.md) — grouped index of commonly used functions (names only).
+- [`os_script/os_script.py`](os_script/os_script.py) — **primary source of truth**: docstrings and section headers (`# Files`, `# Run`, `# Proc`, `# Date time`, etc.).
+- [`tests/tests_files.py`](tests/tests_files.py) and [`tests/tests_datetime.py`](tests/tests_datetime.py) — executable specification of expected behavior.
+- [`examples/`](examples) — usage snippets (`examples.py`, `test.py`).
 
 Secondary / incomplete modules:
 
