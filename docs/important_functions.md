@@ -22,6 +22,8 @@
 - `find_dir`
 - `check_ext`
 - `get_filename`
+- `get_file_size`
+- `get_dir_size`
 
 ## Read / write file content
 

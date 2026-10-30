@@ -592,5 +592,47 @@ class TestFileTimeFunctions(unittest.TestCase):
         self.assertEqual(initial_create_time, modified_create_time)
 
 
+class TestGetFileSize(unittest.TestCase):
+    test_dir = Path('file_size_tests')
+
+    def setUp(self):
+        self.test_dir.mkdir(exist_ok=True)
+        self.test_file = self.test_dir / 'test_file.txt'
+        self.test_file.write_text('hello world')
+        self.nested_dir = self.test_dir / 'nested'
+        self.nested_dir.mkdir(exist_ok=True)
+        self.nested_file = self.nested_dir / 'nested.txt'
+        self.nested_file.write_bytes(b'abc')
+
+    def tearDown(self):
+        if self.test_dir.exists():
+            shutil.rmtree(self.test_dir)
+
+    def test_file_size_path_and_str(self):
+        expected = self.test_file.stat().st_size
+        self.assertEqual(get_file_size(self.test_file), expected)
+        self.assertEqual(get_file_size(str(self.test_file)), expected)
+
+    def test_dir_size_enabled_by_default(self):
+        expected = self.test_file.stat().st_size + self.nested_file.stat().st_size
+        self.assertEqual(get_file_size(self.test_dir), expected)
+        self.assertEqual(get_file_size(str(self.test_dir)), expected)
+
+    def test_dir_size_disabled(self):
+        self.assertEqual(get_file_size(self.test_dir, calc_dir_size=False), self.test_dir.stat().st_size)
+        self.assertNotEqual(get_file_size(self.test_dir, calc_dir_size=False), get_file_size(self.test_dir))
+
+    def test_empty_dir_size(self):
+        empty_dir = self.test_dir / 'empty'
+        empty_dir.mkdir()
+        self.assertEqual(get_file_size(empty_dir), 0)
+
+    def test_get_dir_size(self):
+        expected = self.test_file.stat().st_size + self.nested_file.stat().st_size
+        self.assertEqual(get_dir_size(self.test_dir), expected)
+        self.assertEqual(get_dir_size(str(self.test_dir)), expected)
+        self.assertEqual(get_dir_size(self.test_file), 0)
+
+
 if __name__ == '__main__':
     unittest.main()

@@ -1174,8 +1174,48 @@ def check_ext(f: Path | str, ext_list: list[str]) -> bool:
     return (ext_list[0] == '*') or (Path(f).suffix.lower()[1:] in ext_list)
 
 
-def get_file_size(file_path: Path | str) -> int:
-    return file_path.stat().st_size
+def get_dir_size(dir_path: Path | str) -> int:
+    """
+    Sum file sizes under the directory (symlinks are not followed).
+
+    Parameters:
+        dir_path (Path | str): Directory path.
+
+    Returns:
+        int: Total size in bytes, or 0 if the path is not a directory.
+    """
+    path = Path(dir_path)
+    if not path.is_dir():
+        return 0
+
+    total = 0
+    for entry in path.rglob('*'):
+        try:
+            if entry.is_symlink() or not entry.is_file():
+                continue
+            total += entry.stat().st_size
+        except OSError:
+            continue
+    return total
+
+
+def get_file_size(file_path: Path | str, calc_dir_size: bool = True) -> int:
+    """
+    Return the size of a file in bytes.
+
+    Parameters:
+        file_path (Path | str): File or directory path.
+        calc_dir_size (bool): If True and `file_path` is a directory, return the
+            total size of files under it (same as `get_dir_size`).
+            Default is True. If False, use `stat().st_size` of the path itself.
+
+    Returns:
+        int: Size in bytes.
+    """
+    path = Path(file_path)
+    if calc_dir_size and path.is_dir():
+        return get_dir_size(path)
+    return path.stat().st_size
 
 
 def get_file_write_time(file_path: Path | str) -> datetime:
