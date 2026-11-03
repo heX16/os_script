@@ -6,7 +6,7 @@ Brief guide for AI agents working in this repository.
 
 `os_script` is a Python utility library for OS/shell scripting. It provides helpers for:
 
-- running shell commands (`run_command`, `sh`)
+- running shell commands (`run_command`, `run`)
 - file and directory operations (copy, remove, find, timestamps)
 - process listing/inspection (via `psutil`)
 - datetime parsing/formatting and small text/config utilities

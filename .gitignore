@@ -165,3 +165,4 @@ cython_debug/
 _other/gpt_promts/py_shell_script_short_info.md
 todo_do_in_future.py
 info.txt
+tmp/

@@ -32,8 +32,8 @@ def os_script_version():
 
 # Global variable ################################################################
 
-# Error code after function call `run_command` or `sh`.
-# This variable is used after invoking `run_command` or `sh`.
+# Error code after function call `run_command` or `run`.
+# This variable is used after invoking `run_command` or `run`.
 returncode = None
 
 
@@ -103,7 +103,7 @@ def _get_linux_kernel_version() -> str:
     """Retrieve the Linux kernel version using a shell command."""
     if not is_linux():
         raise RuntimeError("Not running on Linux.")
-    r = sh("uname -r", capture_output=True)
+    r = run('uname -r', capture_output=True)
     return r.stdout.strip()
 
 
@@ -112,7 +112,7 @@ def _get_linux_distributive_name() -> str:
     if not is_linux():
         raise RuntimeError("Not running on Linux.")
     # This command attempts to read the distribution name from various standard files
-    r = sh("cat /etc/*release | grep PRETTY_NAME | cut -d '=' -f2", capture_output=True)
+    r = run("cat /etc/*release | grep PRETTY_NAME | cut -d '=' -f2", capture_output=True)
     distrib_name = r.stdout.strip().strip('"')
     return distrib_name if distrib_name else "Linux Distribution Name Unknown"
 
@@ -1844,7 +1844,7 @@ def file_list_sort_by_ext(file_list: List[Union[Path, str]], reverse=False) -> L
 
 # Run ################################################################
 
-def get_last_error() -> int | None:
+def get_last_run_error() -> int | None:
     """
     Returns the last error code.
     @see returncode, get_error_code
@@ -1856,7 +1856,7 @@ def get_last_error() -> int | None:
 def get_error_code() -> int | None:
     """
     Returns the last error code.
-    @see returncode, get_last_error
+    @see returncode, get_last_run_error
     """
     global returncode
     return returncode
@@ -2034,7 +2034,7 @@ def run_command(command: str,
     return process
 
 
-def sh(command_string: str, background=False, capture_output=False, ensure_unique=False, hidden_console=False):
+def run(command_string: str, background=False, capture_output=False, ensure_unique=False, hidden_console=False):
     """
     Executes multiple shell commands provided in a single string, separated by newlines.
 
@@ -2049,7 +2049,6 @@ def sh(command_string: str, background=False, capture_output=False, ensure_uniqu
     - If command is one - result of the `run_command` calls.
     - If command is multiline - list of results of the `run_command` calls.
     """
-    # TODO: rename `sh` -> `run_multi()`
     # TODO: add `stop_on_error=False`
     # TODO: add `print_stdout=False`
     commands = command_string.strip().split('\n')

@@ -3,9 +3,9 @@
 ## Command execution
 
 - `run_command`
-- `sh`
+- `run`
 - `get_error_code`
-- `get_last_error`
+- `get_last_run_error`
 
 ## Working directory
 
