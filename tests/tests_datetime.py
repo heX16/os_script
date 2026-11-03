@@ -1,6 +1,6 @@
 import unittest
 from os_script import *
-from datetime import datetime, date, time
+from datetime import datetime, date, time, timedelta
 from typing import Union, List, Optional
 
 
@@ -343,6 +343,44 @@ class TestDatetimeParse(unittest.TestCase):
         self.assertIsNone(
             datetime_parse("2022/13/31", no_time=True)  # Invalid month
         )
+
+class TestDuration(unittest.TestCase):
+    """Duration format and parse helpers."""
+
+    def test_duration_to_str(self):
+        self.assertEqual(duration_to_str(42), '42.000s')
+        self.assertEqual(duration_to_str(83.4), '1m 23.400s')
+        self.assertEqual(duration_to_str(3723), '1h 2m 3s')
+        self.assertEqual(duration_to_str(59.9996), '1m 0.000s')
+        self.assertEqual(duration_to_str(timedelta(seconds=42)), '42.000s')
+        self.assertEqual(
+            duration_to_str(timedelta(seconds=83, milliseconds=400)),
+            '1m 23.400s',
+        )
+
+    def test_duration_to_mm_ss(self):
+        self.assertEqual(duration_to_mm_ss(0), '00:00')
+        self.assertEqual(duration_to_mm_ss(75), '01:15')
+        self.assertEqual(duration_to_mm_ss(3600), '60:00')
+        self.assertEqual(duration_to_mm_ss(-65), '-01:05')
+        self.assertEqual(duration_to_mm_ss(timedelta(seconds=75)), '01:15')
+
+    def test_duration_parse(self):
+        self.assertEqual(duration_parse('1.54s'), 1.54)
+        self.assertEqual(duration_parse('5min 59s'), 359)
+        self.assertEqual(duration_parse('1h 2m 3s'), 3723)
+        self.assertEqual(duration_parse('1h'), 3600)
+        self.assertEqual(duration_parse('5min'), 300)
+        self.assertIsNone(duration_parse('not a duration'))
+        with self.assertRaises(ValueError):
+            duration_parse('not a duration', raise_exception=True)
+
+    def test_duration_round_trip(self):
+        for seconds in (42, 83.4, 3723, 59.9996):
+            text = duration_to_str(seconds)
+            self.assertEqual(duration_parse(text), duration_parse(duration_to_str(duration_parse(text))))
+            self.assertEqual(duration_to_str(duration_parse(text)), text)
+
 
 # Run the tests
 if __name__ == '__main__':

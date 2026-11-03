@@ -6,6 +6,7 @@
 import os
 import sys
 import io
+import json
 import shutil
 import subprocess
 import platform
@@ -16,7 +17,7 @@ from pathlib import Path
 from time import sleep
 from datetime import datetime, time, date, timedelta, timezone
 from subprocess import CompletedProcess, Popen
-from typing import Any, Callable, Dict, Set, List, Optional, Union, Iterable
+from typing import Any, Callable, Dict, Set, List, Optional, Union, Iterable, Iterator
 
 try:
     import psutil  # pip install psutil
@@ -57,6 +58,42 @@ def is_wnd() -> bool:
 def is_linux() -> bool:
     """Check if the operating system is Linux."""
     return platform.system().lower() == 'linux'
+
+
+def is_snap() -> bool:
+    """
+    Return True when running inside a snap-confined environment.
+
+    Snap sets the SNAP or SNAP_NAME environment variables. A process may
+    also sit in a cgroup whose name contains 'snap.'. Reading that file
+    fails outside Linux, and then the result is False.
+
+    Returns:
+    bool: True when a snap confinement marker is present.
+    """
+    if os.environ.get('SNAP') or os.environ.get('SNAP_NAME'):
+        return True
+    try:
+        with open('/proc/self/cgroup') as fh:
+            return 'snap.' in fh.read()
+    except OSError:
+        return False
+
+
+def is_mounted(path: Path | str) -> bool:
+    """
+    Return True when path is an active mount point.
+
+    Shell equivalent: `mountpoint -q`. A missing path and a stale FUSE
+    mount both return False.
+
+    Parameters:
+    path (Path | str): Filesystem path to check.
+
+    Returns:
+    bool: True when the path is a mount point.
+    """
+    return os.path.ismount(str(path))
 
 
 def _get_wnd_version() -> str:
@@ -2235,6 +2272,75 @@ def str_present(target_str: str, find_substr: str) -> bool:
         raise TypeError("Unsupported type")
 
 
+def str_to_bool(value: str | bool | int, raise_exception: bool = True) -> bool | None:
+    """
+    Parse a boolean from a string, bool, or 0/1 int.
+
+    Strings are stripped and compared case-insensitively. True values are
+    '1', 'true', 'yes', 'y', 'on', 't'. False values are '0', 'false',
+    'no', 'n', 'off', 'f' (the set from the removed distutils.util.strtobool).
+
+    Parameters:
+    value (str | bool | int): Value to interpret. A bool is returned as is.
+        Integers must be 0 or 1.
+    raise_exception (bool): When True, invalid input raises ValueError.
+        When False, invalid input returns None. Default is True.
+
+    Returns:
+    bool | None: Parsed boolean, or None when raise_exception is False.
+
+    Examples:
+    > str_to_bool('yes')
+    > True
+    > str_to_bool('off')
+    > False
+    """
+    if isinstance(value, bool):
+        return value
+    if isinstance(value, int):
+        if value in (0, 1):
+            return bool(value)
+    elif isinstance(value, str):
+        normalized = value.strip().lower()
+        if normalized in {'1', 'true', 'yes', 'y', 'on', 't'}:
+            return True
+        if normalized in {'0', 'false', 'no', 'n', 'off', 'f'}:
+            return False
+    if raise_exception:
+        raise ValueError(f'Invalid boolean value: {value!r}')
+    return None
+
+
+def safe_filename(name: str | None, default: str = 'untitled', allowed: str = ' _-') -> str:
+    """
+    Build a filesystem-safe name from arbitrary text.
+
+    Keeps alphanumeric characters and characters listed in `allowed`.
+    The result is stripped. An empty result, including a name made only of
+    removed characters, is replaced with `default`.
+
+    Parameters:
+    name (str | None): Source text. None is treated as empty.
+    default (str): Value used when the filtered name is empty. Default is 'untitled'.
+    allowed (str): Extra characters to keep besides alphanumerics. Default is ' _-'.
+        Pass ' _-.' to keep a file extension.
+
+    Returns:
+    str: Safe file name.
+
+    Examples:
+    > safe_filename('Hello, world!')
+    > 'Hello world'
+    > safe_filename('***')
+    > 'untitled'
+    """
+    filtered = ''.join(c for c in (name or '') if c.isalnum() or c in allowed)
+    filtered = filtered.strip()
+    if not filtered:
+        return default
+    return filtered
+
+
 def get_filename(path: Path | str) -> Path:
     """ Extract filename (with extension) """
     return Path(Path(path).name)
@@ -2399,6 +2505,117 @@ def datetime_to_hh_mm(
         > '08:16'
     """
     return datetime_to_str(time_value, f'HH{delimiter}MN')
+
+
+def _duration_to_seconds(seconds: float | int | timedelta) -> float:
+    """Return a duration as seconds."""
+    if isinstance(seconds, timedelta):
+        return seconds.total_seconds()
+    if isinstance(seconds, bool) or not isinstance(seconds, (int, float)):
+        raise TypeError('Expected float, int, or timedelta.')
+    return float(seconds)
+
+
+def duration_to_str(seconds: float | int | timedelta) -> str:
+    """
+    Format a duration as '42.000s', '1m 23.400s', or '1h 2m 3s'.
+
+    Sub-hour values keep millisecond precision. Values of one hour or more
+    are formatted with whole seconds. Rounding is done in milliseconds
+    before splitting, so 59.9996 becomes '1m 0.000s'.
+
+    Parameters:
+    seconds (float | int | timedelta): Duration. A timedelta is converted
+        with total_seconds().
+
+    Returns:
+    str: Human-readable duration. Negative values start with '-'.
+
+    Examples:
+    > duration_to_str(42)
+    > '42.000s'
+    > duration_to_str(83.4)
+    > '1m 23.400s'
+    > duration_to_str(3723)
+    > '1h 2m 3s'
+    """
+    total_ms = round(_duration_to_seconds(seconds) * 1000)
+    sign = '-' if total_ms < 0 else ''
+    total_s, ms = divmod(abs(total_ms), 1000)
+    if total_s >= 3600:
+        hours, rem = divmod(total_s, 3600)
+        minutes, secs = divmod(rem, 60)
+        return f'{sign}{hours}h {minutes}m {secs}s'
+    if total_s >= 60:
+        minutes, secs = divmod(total_s, 60)
+        return f'{sign}{minutes}m {secs}.{ms:03d}s'
+    return f'{sign}{total_s}.{ms:03d}s'
+
+
+def duration_to_mm_ss(seconds: float | int | timedelta) -> str:
+    """
+    Format a duration as MM:SS. Minutes may exceed 59.
+
+    Parameters:
+    seconds (float | int | timedelta): Duration. A timedelta is converted
+        with total_seconds().
+
+    Returns:
+    str: Zero-padded minutes and seconds. Negative values start with '-'.
+
+    Examples:
+    > duration_to_mm_ss(75)
+    > '01:15'
+    > duration_to_mm_ss(3600)
+    > '60:00'
+    > duration_to_mm_ss(-65)
+    > '-01:05'
+    """
+    total = int(round(_duration_to_seconds(seconds)))
+    sign = '-' if total < 0 else ''
+    minutes, secs = divmod(abs(total), 60)
+    return f'{sign}{minutes:02d}:{secs:02d}'
+
+
+def duration_parse(s: str, raise_exception: bool = False) -> float | None:
+    """
+    Parse a duration string into seconds.
+
+    Accepts the forms produced by duration_to_str, and 'min' as well as 'm'
+    for minutes. Hours, minutes, and seconds are each optional, and at least
+    one part must be present. Examples: '1.54s', '5min 59s', '1h 2m 3s', '1h'.
+
+    Parameters:
+    s (str): Duration text.
+    raise_exception (bool): When True, invalid input raises ValueError.
+        When False, invalid input returns None. Default is False.
+
+    Returns:
+    float | None: Seconds rounded to 3 decimal places, or None.
+
+    Examples:
+    > duration_parse('1m 23.400s')
+    > 83.4
+    > duration_parse('nope')
+    > None
+    """
+    if not isinstance(s, str):
+        raise TypeError('Expected str.')
+    # Hours, then minutes ('min' or 'm'), then seconds. At least one part is required.
+    match = re.compile(
+        r'^(?:(?P<hours>\d+)h\s*)?'
+        r'(?:(?P<minutes>\d+)(?:min|m)\s*)?'
+        r'(?:(?P<seconds>\d+(?:\.\d+)?)s)?$'
+    ).match(s.strip())
+    parsed = match.groupdict() if match else {}
+    if not any(parsed.get(name) for name in ('hours', 'minutes', 'seconds')):
+        if raise_exception:
+            raise ValueError(f'Invalid duration: {s!r}')
+        return None
+    hours = int(parsed.get('hours') or 0)
+    minutes = int(parsed.get('minutes') or 0)
+    seconds = float(parsed.get('seconds') or 0)
+    return round(hours * 3600 + minutes * 60 + seconds, 3)
 
 
 def get_datetime() -> datetime:
@@ -2657,7 +2874,10 @@ def dict_cast_values(dict_values: Dict[str, Any], default_values: Dict[str, Any]
     for key, default_value in default_values.items():
         value = dict_values.get(key, default_value)
         if isinstance(default_value, bool):
-            casted_value = bool(value)
+            if isinstance(value, str):
+                casted_value = str_to_bool(value)
+            else:
+                casted_value = bool(value)
         elif isinstance(default_value, int):
             casted_value = int(value)
         elif isinstance(default_value, float):
@@ -2767,8 +2987,6 @@ def load_config_from_json(config_file: Path, default_values: Dict[str, Any]) -> 
     > print(retries)
     """
 
-    import json
-
     if not config_file.exists():
         with open(config_file, 'w') as file:
             json.dump(default_values, file, indent=4)
@@ -2802,6 +3020,61 @@ def save_to_yaml(yaml_file: Union[Path, str], data: Dict, encoding: str = 'utf-8
 
         with open(yaml_file, 'w', encoding=encoding) as f:
             f.write(data)
+
+
+def load_from_json_stream(json_file: Path | str, encoding: str = 'utf-8') -> list:
+    """
+    Load concatenated JSON values from a file.
+
+    Reads the file the same way as load_from_yaml and decodes one JSON value
+    at a time. Whitespace between values is skipped, so both NDJSON and
+    pretty-printed objects written one after another are accepted.
+
+    Parameters:
+    json_file (Path | str): Path to the JSON stream.
+    encoding (str): File encoding. Default is 'utf-8'.
+
+    Returns:
+    list: Decoded JSON values, in order.
+    """
+    text = get_file_content(json_file, encoding=encoding)
+    decoder = json.JSONDecoder()
+    idx = 0
+    n = len(text)
+    values = []
+    while True:
+        while idx < n and text[idx].isspace():
+            idx += 1
+        if idx >= n:
+            return values
+        value, idx = decoder.raw_decode(text, idx)
+        values.append(value)
+
+
+def json_iter_records(data) -> Iterator[dict]:
+    """
+    Yield dict records stored as elements of lists.
+
+    Walks the tree: dict values and nested lists are descended into. A dict
+    is yielded only when it is an element of a list. A yielded record is not
+    descended into, so dicts nested inside that record are not yielded.
+
+    Parameters:
+    data: A JSON-like structure of dicts and lists.
+
+    Returns:
+    Iterator[dict]: Matching records.
+    """
+    if isinstance(data, dict):
+        for value in data.values():
+            yield from json_iter_records(value)
+    elif isinstance(data, list):
+        for value in data:
+            if isinstance(value, dict):
+                yield value
+            elif isinstance(value, (dict, list)):
+                yield from json_iter_records(value)
+
 
 # Utils ################################################################
 

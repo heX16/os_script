@@ -7,6 +7,15 @@
 - `get_error_code`
 - `get_last_run_error`
 
+## OS
+
+- `is_wnd`
+- `is_linux`
+- `is_snap`
+- `is_mounted`
+- `get_os_name`
+- `get_os_version`
+
 ## Working directory
 
 - `cwd`
@@ -60,6 +69,18 @@
 - `proc_list_to_pid_list`
 - `proc_list_to_names_list`
 
+## Strings
+
+- `str_present`
+- `str_to_bool`
+- `safe_filename`
+
+## Duration helpers
+
+- `duration_to_str`
+- `duration_to_mm_ss`
+- `duration_parse`
+
 ## Datetime helpers
 
 - `now`
@@ -92,10 +113,12 @@
 - `load_config_from_ini`
 - `load_config_from_json`
 
-## yaml
+## yaml / json
 
 - `load_from_yaml`
 - `save_to_yaml`
+- `load_from_json_stream`
+- `json_iter_records`
 
 ## Misc
 
