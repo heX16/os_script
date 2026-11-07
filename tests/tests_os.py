@@ -57,5 +57,32 @@ class TestIsMounted(unittest.TestCase):
         self.assertFalse(is_mounted(missing))
 
 
+class TestSameFs(unittest.TestCase):
+    """`same_fs(...)`"""
+
+    def test_not_linux(self):
+        if is_linux():
+            self.skipTest('non-Linux check')
+        with self.assertRaises(RuntimeError):
+            same_fs('.', '.')
+
+    def test_nested_dir_is_same_fs(self):
+        if not is_linux():
+            self.skipTest('Linux only')
+        with tempfile.TemporaryDirectory() as tmp:
+            nested = Path(tmp) / 'nested'
+            nested.mkdir()
+            self.assertTrue(same_fs(tmp, nested))
+            self.assertTrue(same_fs(Path(tmp), nested))
+
+    def test_missing_path(self):
+        if not is_linux():
+            self.skipTest('Linux only')
+        missing = Path(tempfile.gettempdir()) / 'os_script_same_fs_missing'
+        self.assertFalse(missing.exists())
+        with self.assertRaises(FileNotFoundError):
+            same_fs(missing, tempfile.gettempdir())
+
+
 if __name__ == '__main__':
     unittest.main()

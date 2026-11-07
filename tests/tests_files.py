@@ -631,7 +631,52 @@ class TestGetFileSize(unittest.TestCase):
         expected = self.test_file.stat().st_size + self.nested_file.stat().st_size
         self.assertEqual(get_dir_size(self.test_dir), expected)
         self.assertEqual(get_dir_size(str(self.test_dir)), expected)
-        self.assertEqual(get_dir_size(self.test_file), 0)
+        with self.assertRaises(NotADirectoryError):
+            get_dir_size(self.test_file)
+
+    def test_raise_exception_false(self):
+        missing = self.test_dir / 'does_not_exist'
+        self.assertEqual(get_dir_size(missing, raise_exception=False), 0)
+        self.assertEqual(get_dir_size(self.test_file, raise_exception=False), 0)
+        self.assertEqual(get_file_size(missing, raise_exception=False), 0)
+
+    def test_raise_exception_true_missing(self):
+        missing = self.test_dir / 'does_not_exist'
+        with self.assertRaises(FileNotFoundError):
+            get_dir_size(missing)
+        with self.assertRaises(FileNotFoundError):
+            get_file_size(missing)
+
+    def _make_symlink(self, link_path: Path, target: Path, target_is_directory=False):
+        try:
+            rel = os.path.relpath(target, start=link_path.parent)
+            link_path.symlink_to(rel, target_is_directory=target_is_directory)
+        except OSError as e:
+            self.skipTest(f'Symlinks are not supported: {e}')
+
+    def test_follow_dir_symlinks(self):
+        link_dir = self.test_dir / 'link_to_nested'
+        self._make_symlink(link_dir, self.nested_dir, target_is_directory=True)
+        without_links = self.test_file.stat().st_size + self.nested_file.stat().st_size
+        with_links = without_links + self.nested_file.stat().st_size
+        self.assertEqual(get_dir_size(self.test_dir, follow_dir_symlinks=False), without_links)
+        self.assertEqual(get_dir_size(self.test_dir, follow_dir_symlinks=True), with_links)
+
+    def test_follow_file_symlinks(self):
+        link_file = self.test_dir / 'link_to_file.txt'
+        self._make_symlink(link_file, self.test_file)
+        without_links = self.test_file.stat().st_size + self.nested_file.stat().st_size
+        with_links = without_links + self.test_file.stat().st_size
+        self.assertEqual(get_dir_size(self.test_dir, follow_file_symlinks=False), without_links)
+        self.assertEqual(get_dir_size(self.test_dir, follow_file_symlinks=True), with_links)
+
+    def test_get_file_size_follows_file_symlink(self):
+        link_file = self.test_dir / 'link_to_file.txt'
+        self._make_symlink(link_file, self.test_file)
+        expected = self.test_file.stat().st_size
+        self.assertEqual(get_file_size(link_file), expected)
+        self.assertEqual(get_file_size(str(link_file)), expected)
+        self.assertNotEqual(os.lstat(link_file).st_size, expected)
 
 
 if __name__ == '__main__':

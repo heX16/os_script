@@ -88,6 +88,21 @@ def is_mounted(path: Path | str) -> bool:
     return os.path.ismount(str(path))
 
 
+def same_fs(path_a: Path | str, path_b: Path | str) -> bool:
+    """
+    Return True when both paths live on the same mounted filesystem.
+
+    A directory on another mount (USB, NFS, FUSE, a separate partition)
+    compares False. Symlinks are followed.
+    A missing path raises `FileNotFoundError`.
+
+    Linux only.
+    """
+    if not is_linux():
+        raise RuntimeError('Not running on Linux.')
+    return os.stat(path_a).st_dev == os.stat(path_b).st_dev
+
+
 def _get_wnd_version() -> str:
     """Retrieve the Windows version."""
     if not is_wnd():
@@ -1150,45 +1165,132 @@ def check_ext(f: Path | str, ext_list: list[str]) -> bool:
     return (ext_list[0] == '*') or (Path(f).suffix.lower()[1:] in ext_list)
 
 
-def get_dir_size(dir_path: Path | str) -> int:
+def get_dir_size(
+    dir_path: Path | str,
+    raise_exception: bool = True,
+    follow_dir_symlinks: bool = False,
+    follow_file_symlinks: bool = False,
+) -> int:
     """
-    Sum file sizes under the directory (symlinks are not followed).
+    Sum file sizes under the directory.
+
+    A symlink directory given as `dir_path` is always traversed (the caller
+    passed it explicitly). Symlinked directories found during recursion are
+    entered only when `follow_dir_symlinks` is True. Symlinked files are
+    skipped unless `follow_file_symlinks` is True.
+
+    Args:
+        dir_path: Directory to measure.
+        raise_exception: If True, raise on missing path, wrong type, or
+            I/O errors. If False, return 0 (and skip unreadable entries).
+        follow_dir_symlinks: If True, recurse into symlink directories found
+            while walking. Default is False.
+        follow_file_symlinks: If True, count symlink files (target size).
+            Default is False.
 
     Returns:
-        Total size in bytes, or 0 if the path is not a directory.
+        Total size in bytes.
     """
     path = Path(dir_path)
-    if not path.is_dir():
-        return 0
+    try:
+        if not path.is_dir():
+            if not path.exists():
+                raise FileNotFoundError(f'The directory {path} does not exist.')
+            raise NotADirectoryError(f'The specified path {path} is not a directory.')
+    except OSError:
+        if not raise_exception:
+            return 0
+        raise
 
     total = 0
-    for entry in path.rglob('*'):
+
+    def add_dir(dirpath: str, ancestor_reals: set[str]) -> None:
+        nonlocal total
         try:
-            if entry.is_symlink() or not entry.is_file():
-                continue
-            total += entry.stat().st_size
+            real_dir = os.path.realpath(dirpath)
         except OSError:
-            continue
+            if raise_exception:
+                raise
+            return
+        if real_dir in ancestor_reals:
+            return
+        next_ancestors = ancestor_reals | {real_dir}
+        subdirs = []
+        try:
+            # Use `os.scandir` for efficiency and lower memory usage. We iterate lazily and
+            # defer recursion until after the iterator is closed (avoid keeping directory
+            # handles open deep into recursion).
+            with os.scandir(dirpath) as it:
+                for entry in it:
+                    try:
+                        if entry.is_symlink():
+                            if follow_dir_symlinks and entry.is_dir(follow_symlinks=True):
+                                subdirs.append(entry.path)
+                            elif follow_file_symlinks and entry.is_file(follow_symlinks=True):
+                                total += entry.stat(follow_symlinks=True).st_size
+                            continue
+
+                        if entry.is_file(follow_symlinks=False):
+                            total += entry.stat(follow_symlinks=False).st_size
+                        elif entry.is_dir(follow_symlinks=False):
+                            subdirs.append(entry.path)
+                    except OSError:
+                        if raise_exception:
+                            raise
+        except OSError:
+            if raise_exception:
+                raise
+            return
+
+        for subdir in subdirs:
+            add_dir(subdir, next_ancestors)
+
+    add_dir(str(path), set())
     return total
 
 
-def get_file_size(file_path: Path | str, calc_dir_size: bool = True) -> int:
+def get_file_size(
+    file_path: Path | str,
+    calc_dir_size: bool = True,
+    raise_exception: bool = True,
+    follow_dir_symlinks: bool = False,
+    follow_file_symlinks: bool = False,
+) -> int:
     """
     Return the size of a file in bytes.
+
+    If `file_path` is a symlink, the size of the target is returned (not the
+    size of the symlink itself, which is often 0).
 
     Args:
         file_path: File or directory path.
         calc_dir_size: If True and `file_path` is a directory, return the
             total size of files under it (same as `get_dir_size`).
             Default is True. If False, use `stat().st_size` of the path itself.
+        raise_exception: If True, raise on missing path or I/O errors.
+            If False, return 0. Default is True.
+        follow_dir_symlinks: Passed to `get_dir_size` when measuring a directory.
+        follow_file_symlinks: Passed to `get_dir_size` when measuring a directory.
 
     Returns:
         Size in bytes.
     """
     path = Path(file_path)
-    if calc_dir_size and path.is_dir():
-        return get_dir_size(path)
-    return path.stat().st_size
+    try:
+        if calc_dir_size and path.is_dir():
+            return get_dir_size(
+                path,
+                raise_exception=raise_exception,
+                follow_dir_symlinks=follow_dir_symlinks,
+                follow_file_symlinks=follow_file_symlinks,
+            )
+        # Follow symlinks so the caller gets the target file size, not the
+        # (often zero) size of the link node.
+        return os.stat(path, follow_symlinks=True).st_size
+    except OSError:
+        if not raise_exception:
+            return 0
+        raise
 
 
 def get_file_write_time(file_path: Path | str) -> datetime:
@@ -1223,7 +1325,7 @@ def get_file_create_time(file_path: Path | str) -> datetime:
 def set_file_create_time(
     file_path: Path | str,
     new_create_date: datetime,
-    raise_exceptions: bool = True,
+    raise_exception: bool = True,
     ignore_linux: bool = True,
 ):
     """
@@ -1244,9 +1346,9 @@ def set_file_create_time(
     - Non-Windows (Linux, macOS, BSD):
       - Linux: if `ignore_linux` is True (default), the operation is silently ignored and no
         exception is raised. If `ignore_linux` is False, `NotImplementedError` may be raised
-        depending on `raise_exceptions`.
+        depending on `raise_exception`.
       - Other non-Windows (e.g., macOS, BSD): setting creation time is not supported and will
-        raise `NotImplementedError` depending on `raise_exceptions`.
+        raise `NotImplementedError` depending on `raise_exception`.
 
     Consistency with readers:
     - `get_file_create_time()` returns a naive `datetime` in local time (as produced by
@@ -1256,7 +1358,7 @@ def set_file_create_time(
     Args:
         file_path: Path to the target file.
         new_create_date: Desired creation time.
-        raise_exceptions: If True (default), errors are raised. If False, errors are suppressed and
+        raise_exception: If True (default), errors are raised. If False, errors are suppressed and
             the function returns without changing anything.
         ignore_linux: If True (default), on Linux this function does nothing and does not raise.
 
@@ -1266,12 +1368,12 @@ def set_file_create_time(
         ValueError: If the provided time is invalid for the platform (e.g., < 1601-01-01 on Windows).
         OSError: If underlying WinAPI calls fail (open handle, SetFileTime).
         ImportError: If Windows API is unavailable on a Windows platform.
-        NotImplementedError: On non-Windows platforms, when applicable and `raise_exceptions` is True.
+        NotImplementedError: On non-Windows platforms, when applicable and `raise_exception` is True.
     """
     path = Path(file_path)
     if not path.exists():
         # File does not exist
-        if raise_exceptions:
+        if raise_exception:
             raise FileNotFoundError(f'The file {path} does not exist.')
         return
     # Platform-specific implementation
@@ -1359,12 +1461,12 @@ def set_file_create_time(
 
         except ImportError:
             # Windows API is not available
-            if raise_exceptions:
+            if raise_exception:
                 raise ImportError('Windows API not available. Cannot set creation time.')
             return
         except Exception:
             # Unexpected exceptions
-            if raise_exceptions:
+            if raise_exception:
                 raise
             return
 
@@ -1373,7 +1475,7 @@ def set_file_create_time(
         if is_linux() and ignore_linux:
             return
         # Creation time setting is not supported on non-Windows platforms
-        if raise_exceptions:
+        if raise_exception:
             raise NotImplementedError('Setting file creation time is not supported on this platform.')
         return
 

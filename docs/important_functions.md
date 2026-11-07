@@ -13,6 +13,7 @@
 - `is_linux`
 - `is_snap`
 - `is_mounted`
+- `same_fs`
 - `get_os_name`
 - `get_os_version`
 
