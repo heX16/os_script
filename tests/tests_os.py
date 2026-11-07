@@ -82,6 +82,7 @@ class TestSameFs(unittest.TestCase):
         self.assertFalse(missing.exists())
         with self.assertRaises(FileNotFoundError):
             same_fs(missing, tempfile.gettempdir())
+        self.assertFalse(same_fs(missing, tempfile.gettempdir(), raise_exception=False))
 
 
 if __name__ == '__main__':

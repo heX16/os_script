@@ -88,19 +88,30 @@ def is_mounted(path: Path | str) -> bool:
     return os.path.ismount(str(path))
 
 
-def same_fs(path_a: Path | str, path_b: Path | str) -> bool:
+def same_fs(
+    path_a: Path | str,
+    path_b: Path | str,
+    raise_exception: bool = True,
+) -> bool:
     """
     Return True when both paths live on the same mounted filesystem.
 
     A directory on another mount (USB, NFS, FUSE, a separate partition)
     compares False. Symlinks are followed.
-    A missing path raises `FileNotFoundError`.
+    A missing path raises `FileNotFoundError` when `raise_exception` is True.
+    When `raise_exception` is False, an `OSError` returns False.
 
     Linux only.
     """
     if not is_linux():
         raise RuntimeError('Not running on Linux.')
-    return os.stat(path_a).st_dev == os.stat(path_b).st_dev
+
+    try:
+        return os.stat(path_a).st_dev == os.stat(path_b).st_dev
+    except OSError:
+        if not raise_exception:
+            return False
+        raise
 
 
 def _get_wnd_version() -> str:
@@ -1170,6 +1181,7 @@ def get_dir_size(
     raise_exception: bool = True,
     follow_dir_symlinks: bool = False,
     follow_file_symlinks: bool = False,
+    same_fs_only: bool = False,
 ) -> int:
     """
     Sum file sizes under the directory.
@@ -1186,6 +1198,10 @@ def get_dir_size(
         follow_dir_symlinks: If True, recurse into symlink directories found
             while walking. Default is False.
         follow_file_symlinks: If True, count symlink files (target size).
+            Default is False.
+        same_fs_only: If True, stay on the filesystem of `dir_path`.
+            A subdirectory on another filesystem (a mount point, or a
+            symlink directory whose target is elsewhere) is not entered.
             Default is False.
 
     Returns:
@@ -1224,6 +1240,10 @@ def get_dir_size(
                 for entry in it:
                     try:
                         if entry.is_dir() and (follow_dir_symlinks or not entry.is_symlink()):
+                            # `same_fs` follows symlinks, so a mount point or a
+                            # symlink directory on another device is not added.
+                            if same_fs_only and not same_fs(path, entry.path, raise_exception=False):
+                                continue
                             subdirs.append(entry.path)
                         elif entry.is_file() and (follow_file_symlinks or not entry.is_symlink()):
                             total += entry.stat().st_size
@@ -1248,6 +1268,7 @@ def get_file_size(
     raise_exception: bool = True,
     follow_dir_symlinks: bool = False,
     follow_file_symlinks: bool = False,
+    same_fs_only: bool = False,
 ) -> int:
     """
     Return the size of a file in bytes.
@@ -1264,6 +1285,8 @@ def get_file_size(
             If False, return 0. Default is True.
         follow_dir_symlinks: Passed to `get_dir_size` when measuring a directory.
         follow_file_symlinks: Passed to `get_dir_size` when measuring a directory.
+        same_fs_only: Passed to `get_dir_size` when measuring a directory.
+            Default is False.
 
     Returns:
         Size in bytes.
@@ -1276,6 +1299,7 @@ def get_file_size(
                 raise_exception=raise_exception,
                 follow_dir_symlinks=follow_dir_symlinks,
                 follow_file_symlinks=follow_file_symlinks,
+                same_fs_only=same_fs_only,
             )
         # Follow symlinks so the caller gets the target file size, not the
         # (often zero) size of the link node.
