@@ -3,8 +3,11 @@ def systemd_file_type(file_name: Path):
     """
     Extracts the type of a systemd service file based on its suffix (and validates it).
 
-    :param file_name: Path object representing the file.
-    :return: String with the file type if valid (e.g., 'service', 'timer'), or False if invalid.
+    Args:
+        file_name: Path object representing the file.
+
+    Returns:
+        String with the file type if valid (e.g., 'service', 'timer'), or False if invalid.
     """
     valid_types = {
         'service', 'timer', 'socket', 'device', 'mount', 'automount',
@@ -32,8 +35,11 @@ def systemd_file_supports_enable(file_type: str) -> bool:
     - target: Enables grouping of other units.
     - path: Enables file or directory monitoring.
 
-    :param file_type: Type of the systemd unit (e.g., 'service', 'timer').
-    :return: True if the 'enable' command is supported, otherwise False.
+    Args:
+        file_type: Type of the systemd unit (e.g., 'service', 'timer').
+
+    Returns:
+        True if the 'enable' command is supported, otherwise False.
     """
     enable_supported = {
         'service', 'timer', 'socket', 'mount', 'automount',
@@ -54,8 +60,11 @@ def systemd_file_supports_start(file_type: str) -> bool:
     - swap: Activates swap units.
     - target: Activates groups of units.
 
-    :param file_type: Type of the systemd unit (e.g., 'service', 'timer').
-    :return: True if the 'start' command is supported, otherwise False.
+    Args:
+        file_type: Type of the systemd unit (e.g., 'service', 'timer').
+
+    Returns:
+        True if the 'start' command is supported, otherwise False.
     """
     start_supported = {
         'service', 'timer', 'socket', 'mount', 'swap', 'target'

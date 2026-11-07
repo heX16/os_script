@@ -68,9 +68,6 @@ def is_snap() -> bool:
     Snap sets the SNAP or SNAP_NAME environment variables. A process may
     also sit in a cgroup whose name contains 'snap.'. Reading that file
     fails outside Linux, and then the result is False.
-
-    Returns:
-    bool: True when a snap confinement marker is present.
     """
     if os.environ.get('SNAP') or os.environ.get('SNAP_NAME'):
         return True
@@ -87,12 +84,6 @@ def is_mounted(path: Path | str) -> bool:
 
     Shell equivalent: `mountpoint -q`. A missing path and a stale FUSE
     mount both return False.
-
-    Parameters:
-    path (Path | str): Filesystem path to check.
-
-    Returns:
-    bool: True when the path is a mount point.
     """
     return os.path.ismount(str(path))
 
@@ -198,12 +189,7 @@ def get_file_content(file_name: str | Path, encoding='utf-8', split=False, ignor
     Reads the content of a file and returns it as a string.
 
     Args:
-        file_name (str | Path): The name or path of the file to read.
-        encoding (str): The encoding to use when reading the file. Defaults to 'utf-8'.
-        ignore_io_error (bool): If True, returns an empty string on IOError. Defaults to False.
-
-    Returns:
-        str: The content of the file, or an empty string if an IOError occurs and ignore_io_error is True.
+        ignore_io_error: If True, returns an empty string on IOError. Defaults to False.
 
     Note:
         If the file is too large, calling this function will consume a lot of memory.
@@ -227,17 +213,12 @@ def save_file_content(file_name: str | Path, content: str | List[str] | Iterable
     Saves the given content to a file.
 
     Args:
-        file_name (str | Path): The name or path of the file to write to.
-        content (str | Iterable[str]): The content to write into the file. Can be a string or a list of strings.
-        encoding (str): The encoding to use when writing to the file. Defaults to 'utf-8'.
-        ignore_io_error (bool): If True, suppresses IOError. Defaults to False.
+        content: The content to write into the file. Can be a string or a list of strings.
+        ignore_io_error: If True, suppresses IOError. Defaults to False.
 
     Raises:
         IOError: If there is an error writing to the file and ignore_io_error is False.
         ValueError: If the content is not of type str or list[str].
-
-    Returns:
-        None
     """
     try:
         with open(file_name, 'w', encoding=encoding) as f:
@@ -256,25 +237,15 @@ def split_file(file_path: Path | str, chunk_size, remove_on_failure=True):
     """
     Splits a file into multiple chunks of equal size (except for the last chunk).
 
-    Parameters:
-    file_path (Path): Path to the input file.
-    chunk_size (int): Size of each chunk in bytes.
-    remove_on_failure (bool): If True, removes created chunks if an error occurs. Default is True.
+    Args:
+        chunk_size: Size of each chunk in bytes.
+        remove_on_failure: If True, removes created chunks if an error occurs. Default is True.
 
     Returns:
-    bool: True if the operation is successful, False if an error occurs.
+        True if the operation is successful, False if an error occurs.
 
     See Also:
         split_file, combine_files, split_files_get_list, file_list_calc_total_size
-
-    Example:
-        ```
-        success = split_file(Path('test.txt'), 10000)
-        if success:
-            print("File successfully split into chunks.")
-        else:
-            print("An error occurred while splitting the file.")
-        ```
     """
     file_path = Path(file_path)
     block_size = 64 * 1024  # 64 KB
@@ -311,24 +282,24 @@ def combine_files(output_file_path: Path, chunk_files: List[Path]) -> bool:
     """
     Combines chunk files into a single output file.
 
-    Parameters:
-    output_file_path (Path): Path to the output file.
-    chunk_files (List[Path]): List of Path objects representing the chunk files.
+    Args:
+        output_file_path: Path to the output file.
+        chunk_files: List of Path objects representing the chunk files.
 
     Returns:
-    bool: True if the operation is successful, False if an error occurs.
+        True if the operation is successful, False if an error occurs.
 
     See Also:
         split_file, combine_files, split_files_get_list, file_list_calc_total_size
 
-    Example usage:
-    >>> from pathlib import Path
-    >>> files = [Path('file.txt.001'), Path('file.txt.002'), Path('file.txt.003'), Path('file.txt.004')]
-    >>> success = combine_files(Path('combined_file.txt'), files)
-    >>> if success:
-    >>>     print("Files successfully combined into one.")
-    >>> else:
-    >>>     print("An error occurred while combining the files.")
+    Examples:
+        >>> from pathlib import Path
+        >>> files = [Path('file.txt.001'), Path('file.txt.002'), Path('file.txt.003'), Path('file.txt.004')]
+        >>> success = combine_files(Path('combined_file.txt'), files)
+        >>> if success:
+        >>>     print("Files successfully combined into one.")
+        >>> else:
+        >>>     print("An error occurred while combining the files.")
     """
     block_size = 64 * 1024  # 64 KB
     try:
@@ -351,12 +322,14 @@ def rmdir(path: str | Path, must_be_empty: bool = False, recursive: bool = True)
     """
     Removes a directory from the filesystem.
 
-    :param path: Path to the directory to be removed.
-    :param must_be_empty: If True, checks if the directory is empty before removing.
-    :param recursive: If True, allows for recursive deletion of the directory and its contents.
+    Args:
+        path: Path to the directory to be removed.
+        must_be_empty: If True, checks if the directory is empty before removing.
+        recursive: If True, allows for recursive deletion of the directory and its contents.
 
-    :raises IsADirectoryError: If the path is not a directory.
-    :raises OSError: If must_be_empty is True and the directory is not empty.
+    Raises:
+        IsADirectoryError: If the path is not a directory.
+        OSError: If must_be_empty is True and the directory is not empty.
     """
 
     def rmdir_recursion(path_recur: Path):
@@ -399,23 +372,15 @@ def rm(path: str | Path, recursive=False):
     """
     Remove a file or directory.
 
-    Parameters:
-    - path (str or Path): The path to the file or directory to be removed.
-    - recursive (bool): If True - remove directory. If False - remove one file. If None - remove one file or dir.
+    Args:
+        path: The path to the file or directory to be removed.
+        recursive: If True - remove directory. If False - remove one file. If None - remove one file or dir.
 
     Raises:
-    - FileNotFoundError: If the specified path does not exist.
-    - IsADirectoryError: If the specified path is a directory and recursive is not set to True.
-    - PermissionError: If the user has insufficient permissions to remove the specified path.
-    - Exception: If an unspecified error occurs during the removal operation.
-
-    Example:
-    >>> rm("file.txt")
-    Successfully removed file.txt
-
-    >>> rm("directory/", recursive=True)
-    Successfully removed directory and its contents recursively.
-
+        FileNotFoundError: If the specified path does not exist.
+        IsADirectoryError: If the specified path is a directory and recursive is not set to True.
+        PermissionError: If the user has insufficient permissions to remove the specified path.
+        Exception: If an unspecified error occurs during the removal operation.
     """
     # TODO: double check with a symlink
     path_obj = Path(path)
@@ -443,26 +408,16 @@ def copy_files(source_dir: Path | str, destination_dir: Path | str):
     """
     Copy all files from the source directory to the destination directory.
 
-    Parameters:
-    - source_dir (Path or str): The path to the source directory containing files to be copied.
-    - destination_dir (Path or str): The destination directory where files will be copied.
-
     Raises:
-    - FileNotFoundError: If the source directory does not exist.
-    - NotADirectoryError: If the source path is not a directory.
-    - NotADirectoryError: If the destination path is not a directory.
-    - PermissionError: If the user has insufficient permissions.
-    - Exception: If an unspecified error occurs during the copy operation.
-
-    Example:
-    >>> copy_files("source_folder", "destination_folder")
-    File source_folder/file1.txt copied to destination_folder/file1.txt
-    File source_folder/file2.txt copied to destination_folder/file2.txt
-    ...
+        FileNotFoundError: If the source directory does not exist.
+        NotADirectoryError: If the source path is not a directory.
+        NotADirectoryError: If the destination path is not a directory.
+        PermissionError: If the user has insufficient permissions.
+        Exception: If an unspecified error occurs during the copy operation.
 
     Note:
-    This function recursively copies files from the source directory to the destination directory,
-    preserving the directory structure.
+        This function recursively copies files from the source directory to the destination directory,
+        preserving the directory structure.
     """
 
     source_path = Path(source_dir)
@@ -495,18 +450,10 @@ def copy_file(source_file: Path | str, destination_dir: Path | str):
     """
     Copy a file from the source path to the destination path.
 
-    Parameters:
-    - source_file (Path or str): The path to the source file to be copied.
-    - destination_path (Path or str): The destination directory or file.
-
     Raises:
-    - FileNotFoundError: If the source file does not exist.
-    - PermissionError: If the user has insufficient permissions.
-    - Exception: If an unspecified error occurs during the copy operation.
-
-    Example:
-    >>> copy_file("source.txt", "destination_folder")
-    File source.txt copied to destination_folder/source.txt
+        FileNotFoundError: If the source file does not exist.
+        PermissionError: If the user has insufficient permissions.
+        Exception: If an unspecified error occurs during the copy operation.
     """
 
     source_path = Path(source_file)
@@ -554,12 +501,13 @@ class CopyFileProgressTracker:
         the amount of data written and optionally calls a user-defined callback function
         with detailed progress information.
 
-        :param file: File object to which data is written.
-        :param file_size: Total size of the file being copied.
-        :param callback_print_progress: Function to call for printing progress.
-        :param callback_print_data: Data for the progress printing callback.
-        :param callback: Optional user-defined callback function for additional processing.
-        :param callback_user_data: Optional user data for the additional callback.
+        Args:
+            file: File object to which data is written.
+            file_size: Total size of the file being copied.
+            callback_print_progress: Function to call for printing progress.
+            callback_print_data: Data for the progress printing callback.
+            callback: Optional user-defined callback function for additional processing.
+            callback_user_data: Optional user data for the additional callback.
         """
 
         self._file = file
@@ -593,12 +541,13 @@ def print_copy_progress(data: bytes, data_len: int, copied_size: int, file_size:
     """
     Print progress to the console at most once per second.
 
-    :param data: The latest chunk of data written to the file.
-    :param data_len: The size of the latest data chunk.
-    :param copied_size: Total size of data copied so far.
-    :param file_size: Total size of the file being copied.
-    :param user_data: Dictionary to store user data `Dict{'last_print_time': 0.0}`, like the time of the last print.
-    :param error_code: Error codes (not working - under development).
+    Args:
+        data: The latest chunk of data written to the file.
+        data_len: The size of the latest data chunk.
+        copied_size: Total size of data copied so far.
+        file_size: Total size of the file being copied.
+        user_data: Dictionary to store user data `Dict{'last_print_time': 0.0}`, like the time of the last print.
+        error_code: Error codes (not working - under development).
     """
     if data is None:
         return
@@ -626,12 +575,13 @@ def copy_file_with_progress(source_path: Path | str, destination_path: Path | st
     """
     Copy a file from source to destination with progress tracking and optional callback execution.
 
-    :param source_path: Path to the source file.
-    :param destination_path: Path to the destination file.
-    :param follow_symlinks: Whether to follow symlinks or copy them as symlinks.
-    :param callback: Optional callback function for custom processing.
-    :param callback_user_data: Data for the custom callback function.
-    :param callback_print_progress: Optional callback for printing progress.
+    Args:
+        source_path: Path to the source file.
+        destination_path: Path to the destination file.
+        follow_symlinks: Whether to follow symlinks or copy them as symlinks.
+        callback: Optional callback function for custom processing.
+        callback_user_data: Data for the custom callback function.
+        callback_print_progress: Optional callback for printing progress.
 
     callback propotype:
     `def print_copy_progress(data: bytes, data_len: int, copied_size: int, file_size: int,
@@ -705,16 +655,19 @@ def copy_file_write_changed_blocks(
     - When files are identical in in-place mode, metadata is left unchanged even if
       `update_metadata=True` (to avoid needless writes).
 
-    :param source_path: Path to the source file.
-    :param destination_path: Path to the destination file or directory.
-    :param block_size: Compare/write granularity in bytes. Default: 4 KiB.
-    :param group_blocks: Number of blocks read as one compare group. Default: 64 (256 KiB).
-    :param follow_symlinks: Whether to follow symlinks (passed to full-copy fallback).
-    :param callback: Optional callback (same prototype as `copy_file_with_progress`).
-    :param callback_user_data: Data for the custom callback function.
-    :param callback_print_progress: Optional progress printer (default: `print_copy_progress`).
-    :param update_metadata: If True, copy source metadata after a real write/full copy.
-    :return: Stats dict with keys:
+    Args:
+        source_path: Path to the source file.
+        destination_path: Path to the destination file or directory.
+        block_size: Compare/write granularity in bytes. Default: 4 KiB.
+        group_blocks: Number of blocks read as one compare group. Default: 64 (256 KiB).
+        follow_symlinks: Whether to follow symlinks (passed to full-copy fallback).
+        callback: Optional callback (same prototype as `copy_file_with_progress`).
+        callback_user_data: Data for the custom callback function.
+        callback_print_progress: Optional progress printer (default: `print_copy_progress`).
+        update_metadata: If True, copy source metadata after a real write/full copy.
+
+    Returns:
+        Stats dict with keys:
         `bytes_total`, `bytes_scanned`, `bytes_written`, `blocks_total`, `blocks_written`.
 
     callback prototype:
@@ -907,9 +860,12 @@ def change_filename_ext_in_path(filename: Path, new_extension: str = '.txt') -> 
     Changes in value the Path-file extension of a given filename to a new extension.
     WARNING: There is no real renaming of the file in the file system. Change only in the return value (in the memory).
 
-    :param filename: A Path object representing the original filename.
-    :param new_extension: A string representing the new file extension, starting with a dot.
-    :return: A Path object with the new file extension.
+    Args:
+        filename: A Path object representing the original filename.
+        new_extension: A string representing the new file extension, starting with a dot.
+
+    Returns:
+        A Path object with the new file extension.
     """
     if not new_extension.startswith('.'):
         new_extension = '.' + new_extension
@@ -926,13 +882,9 @@ def rename_only(filename: Path | str, new_filename: Path | str):
             Must contain only the name, without the path to the new directory.
 
     The function renames the file located at the specified path by changing its name to new_filename,
-    while ensuring
-    that both the current file and the new name are in the same directory.
-    If new_filename contains more than one path
-    segment, the function raise exception.
-
-    Example:
-    >>> rename_only("path/file.txt", "new_file.txt")
+    while ensuring that both the current file and the new name are in the same directory.
+    If `new_filename` contains more than one path segment, 
+    the function raise exception `ValueError`.
     """
     filename = Path(filename)
     new_filename = Path(new_filename)
@@ -953,17 +905,10 @@ def move_file_to_dir(source: Path | str, destination_dir: Path | str) -> None:
     Move a file from the source location to the destination directory.
 
     Args:
-        source (Path | str): The source file's path
-        destination_dir (Path | str): The destination directory's path, must be directory
+        source: The source file's path
+        destination_dir: The destination directory's path, must be directory
 
     This function takes the source file, renames it with its original name, and moves it to the destination directory.
-
-    Example:
-    ```
-    >>> source_path = Path("path/to/source/file.txt")
-    >>> destination_directory = Path("path/to/destination/")
-    >>> move_file_to_dir(source_path, destination_directory)
-    ```
     """
     source = Path(source)
     destination_dir = Path(destination_dir)
@@ -978,16 +923,16 @@ def rename_files_recursively(directory_path: Path | str, search_filename: str, n
     Recursively renames files (and optionally directories) in a specified directory
     that match a given filename.
 
-    Parameters:
-    directory_path (Path|str): The path of the directory to start the search.
-    search_filename (str): The filename to search for.
-    new_filename (str): The new filename to apply to matched items.
-    rename_dir (bool): If False, only files are renamed. If True, directories are also renamed.
+    Args:
+        directory_path: The path of the directory to start the search.
+        search_filename: The filename to search for.
+        new_filename: The new filename to apply to matched items.
+        rename_dir: If False, only files are renamed. If True, directories are also renamed.
 
     Raises:
-    FileNotFoundError: If the specified directory does not exist.
-    PermissionError: If the script lacks necessary permissions to rename a file or directory.
-    OSError: For other issues related to file renaming (e.g., file in use, invalid names).
+        FileNotFoundError: If the specified directory does not exist.
+        PermissionError: If the script lacks necessary permissions to rename a file or directory.
+        OSError: For other issues related to file renaming (e.g., file in use, invalid names).
     """
     directory_path = Path(directory_path)
     if not directory_path.exists():
@@ -1008,20 +953,19 @@ def find(
     Find files in the specified directory matching the given search mask.
 
     Args:
-        directory_path (Path or str): The directory in which to search for files.
-        search_mask (str): The search mask to filter files, e.g., "*.txt".
+        directory_path: The directory in which to search for files.
+        search_mask: The search mask to filter files, e.g., "*.txt".
             You can use "**/" to search recursively (equivalent `recursively=True`).
-        recursively (bool, optional): If True, search for files in subdirectories as well.
+        recursively: If True, search for files in subdirectories as well.
             If False, only search for files in the specified directory.
 
     Returns:
-        Iterable of Path: An iterable of `Path` objects representing the found files.
+        An iterable of `Path` objects representing the found files.
 
     Raises:
         FileNotFoundError: If the specified directory does not exist.
 
-
-    Example:
+    Examples:
         ```
         for file in find('~/', '*', recursively=True):
             print(str(file))
@@ -1054,19 +998,19 @@ def find_dir(directory_path: Path | str = '.', search_mask: str = '*', recursive
     Find directories in the specified directory matching the given search mask.
 
     Args:
-        directory_path (Path or str): The directory in which to search for directories.
-        search_mask (str): The search mask to filter directories, e.g., "subdir*".
+        directory_path: The directory in which to search for directories.
+        search_mask: The search mask to filter directories, e.g., "subdir*".
             You can use "**/" to search recursively (equivalent to `recursively=True`).
-        recursively (bool, optional): If True, search for directories in subdirectories as well.
+        recursively: If True, search for directories in subdirectories as well.
             If False, only search for directories in the specified directory.
 
     Returns:
-        Generator of Path: A generator of `Path` objects representing the found directories.
+        A generator of `Path` objects representing the found directories.
 
     Raises:
         FileNotFoundError: If the specified directory does not exist.
 
-    Example:
+    Examples:
         >>> for directory in find_dir('~/', 'subdir*', recursively=True):
         >>>     print(str(directory))
 
@@ -1104,17 +1048,17 @@ def get_file_perm(p: Path | str) -> str:
     implying read and execute permissions for user, group, and others. If not read-only,
     it returns '777', implying full permissions.
 
-    Parameters:
-    p (Path): The path of the file or directory for which to retrieve permissions.
+    Args:
+        p: The path of the file or directory for which to retrieve permissions.
 
     Returns:
-    str: A string representing the file permissions in octal format on Linux.
+        A string representing the file permissions in octal format on Linux.
 
-    Example:
-    >>> get_file_perm(Path('/path/to/file'))
-    '755'  # On Linux
-    '777'  # On Windows, not read-only file
-    '555'  # On Windows, read-only file
+    Examples:
+        >>> get_file_perm(Path('/path/to/file'))
+        '755'  # On Linux
+        '777'  # On Windows, not read-only file
+        '555'  # On Windows, read-only file
     """
     p = Path(p)
     if os.name == 'nt':  # Checks if the operating system is Windows
@@ -1151,16 +1095,10 @@ def set_current_dir(new_directory: Path | str) -> None:
     """
     Set the current working directory to the specified path.
 
-    Args:
-        new_directory (Path or str): The new directory to set as the current working directory.
-
     Raises:
         FileNotFoundError: If the specified directory does not exist.
         NotADirectoryError: If the specified path is not a directory.
         PermissionError: If the script lacks necessary permissions to change the current directory.
-
-    Example:
-    >>> set_current_dir('/path/to/new/directory')  # Changes the current working directory
     """
     new_directory = Path(new_directory).expanduser()
 
@@ -1193,20 +1131,20 @@ def check_ext(f: Path | str, ext_list: list[str]) -> bool:
     Check if a file's extension matches a list of allowed extensions.
 
     Args:
-        f (Path | str): A Path object representing the file to be checked.
-        ext_list (list[str]): A list of allowed file extensions.
+        f: A Path object representing the file to be checked.
+        ext_list: A list of allowed file extensions.
             `ext_list = ['txt', 'md']` - accept *.txt and *.md files
             `ext_list = ['*']` - accept all files
             `ext_list = []` - ignore all files
             `ext_list = ['']` - accept files with empty extension
 
     Returns:
-        bool: True if the file's extension matches one of the allowed extensions,
-              False otherwise.
+        True if the file's extension matches one of the allowed extensions,
+        False otherwise.
 
     Examples:
-    >>> if check_ext(Path("example.txt"), ['txt', 'md']):
-    >>>   print(f"Extension is allowed.")
+        >>> if check_ext(Path("example.txt"), ['txt', 'md']):
+        >>>   print(f"Extension is allowed.")
     """
     ext_list = [i.lower() for i in ext_list]
     return (ext_list[0] == '*') or (Path(f).suffix.lower()[1:] in ext_list)
@@ -1216,11 +1154,8 @@ def get_dir_size(dir_path: Path | str) -> int:
     """
     Sum file sizes under the directory (symlinks are not followed).
 
-    Parameters:
-        dir_path (Path | str): Directory path.
-
     Returns:
-        int: Total size in bytes, or 0 if the path is not a directory.
+        Total size in bytes, or 0 if the path is not a directory.
     """
     path = Path(dir_path)
     if not path.is_dir():
@@ -1241,14 +1176,14 @@ def get_file_size(file_path: Path | str, calc_dir_size: bool = True) -> int:
     """
     Return the size of a file in bytes.
 
-    Parameters:
-        file_path (Path | str): File or directory path.
-        calc_dir_size (bool): If True and `file_path` is a directory, return the
+    Args:
+        file_path: File or directory path.
+        calc_dir_size: If True and `file_path` is a directory, return the
             total size of files under it (same as `get_dir_size`).
             Default is True. If False, use `stat().st_size` of the path itself.
 
     Returns:
-        int: Size in bytes.
+        Size in bytes.
     """
     path = Path(file_path)
     if calc_dir_size and path.is_dir():
@@ -1319,19 +1254,19 @@ def set_file_create_time(
       but the reader presents them in local time for consistency.
 
     Args:
-    - file_path: Path to the target file.
-    - new_create_date: Desired creation time.
-    - raise_exceptions: If True (default), errors are raised. If False, errors are suppressed and
-      the function returns without changing anything.
-    - ignore_linux: If True (default), on Linux this function does nothing and does not raise.
+        file_path: Path to the target file.
+        new_create_date: Desired creation time.
+        raise_exceptions: If True (default), errors are raised. If False, errors are suppressed and
+            the function returns without changing anything.
+        ignore_linux: If True (default), on Linux this function does nothing and does not raise.
 
     Raises:
-    - FileNotFoundError: If the path does not exist.
-    - IsADirectoryError: If the path is not a file.
-    - ValueError: If the provided time is invalid for the platform (e.g., < 1601-01-01 on Windows).
-    - OSError: If underlying WinAPI calls fail (open handle, SetFileTime).
-    - ImportError: If Windows API is unavailable on a Windows platform.
-    - NotImplementedError: On non-Windows platforms, when applicable and `raise_exceptions` is True.
+        FileNotFoundError: If the path does not exist.
+        IsADirectoryError: If the path is not a file.
+        ValueError: If the provided time is invalid for the platform (e.g., < 1601-01-01 on Windows).
+        OSError: If underlying WinAPI calls fail (open handle, SetFileTime).
+        ImportError: If Windows API is unavailable on a Windows platform.
+        NotImplementedError: On non-Windows platforms, when applicable and `raise_exceptions` is True.
     """
     path = Path(file_path)
     if not path.exists():
@@ -1448,14 +1383,14 @@ def touch(file: Path | str, mode=None, exist_ok=True):
     """
     Create a new file at the specified path or update the modification time if the file already exists.
 
-    Parameters:
-    file (Path | str): The path of the file to be created or touched.
-    mode (int, optional): The permissions to set on the newly created file. Defaults to None.
-    exist_ok (bool): If False, raises a FileExistsError if the file already exists. Defaults to True.
+    Args:
+        file: The path of the file to be created or touched.
+        mode: The permissions to set on the newly created file. Defaults to None.
+        exist_ok: If False, raises a FileExistsError if the file already exists. Defaults to True.
 
     Note:
-    This function uses Path.touch from the pathlib module to create the file. The mode parameter
-    is only effective if the file is created; it does not change the permissions of an existing file.
+        This function uses Path.touch from the pathlib module to create the file. The mode parameter
+        is only effective if the file is created; it does not change the permissions of an existing file.
     """
     file = Path(file)
     file.touch(mode=mode, exist_ok=exist_ok)
@@ -1465,9 +1400,11 @@ def chmod(path: Path | str, mode, follow_symlinks=True):
     """
     Change the permissions of a file or directory.
 
-    Parameters: path (Path | str): The path of the file or directory. mode (int): The permissions to set. Should be
-    an integer (e.g., 0o755). follow_symlinks (bool): If False, and the path is a symbolic link, chmod modifies the
-    symbolic link itself instead of the file it points to. Defaults to True.
+    Args:
+        path: The path of the file or directory.
+        mode: The permissions to set. Should be an integer (e.g., 0o755).
+        follow_symlinks: If False, and the path is a symbolic link, chmod modifies the
+            symbolic link itself instead of the file it points to. Defaults to True.
     """
     path = Path(path)
     path.chmod(mode=mode, follow_symlinks=follow_symlinks)
@@ -1477,16 +1414,16 @@ def chown(path: Path | str, user: str | int | None = None, group: str | int | No
     """
     Change the owner and group of a file or directory.
 
-    Parameters:
-    path (Path | str): The path of the file or directory.
-    user (str | int, optional): The name or ID of the user to set as the owner. Defaults to None.
-    group (str | int, optional): The name or ID of the group to set. Defaults to None.
+    Args:
+        path: The path of the file or directory.
+        user: The name or ID of the user to set as the owner. Defaults to None.
+        group: The name or ID of the group to set. Defaults to None.
 
     Note:
-    This function uses `os.chown` to change the file owner and group.
-    If either user or group is None, the corresponding ownership is not changed.
-    If a user or group name is provided, it will be resolved to the corresponding ID.
-    This function only works on Linux systems.
+        This function uses `os.chown` to change the file owner and group.
+        If either user or group is None, the corresponding ownership is not changed.
+        If a user or group name is provided, it will be resolved to the corresponding ID.
+        This function only works on Linux systems.
     """
     if not is_linux():
         raise OSError('This function is only supported on Linux systems.')
@@ -1522,11 +1459,11 @@ def split_files_get_list(first_chunk_path: Path | str) -> List[Path]:
     """
     Verifies and lists chunk files in the directory of the given first chunk file.
 
-    Parameters:
-    first_chunk_path (Path): Path to the first chunk file. Must be '*.001' (e.g., 'file.txt.001').
+    Args:
+        first_chunk_path: Path to the first chunk file. Must be '*.001' (e.g., 'file.txt.001').
 
     Returns:
-    list: List of Path objects representing the chunk files if conditions are met, otherwise an empty list.
+        List of Path objects representing the chunk files if conditions are met, otherwise an empty list.
 
     See Also:
         split_file, combine_files, split_files_get_list, file_list_calc_total_size
@@ -1567,11 +1504,11 @@ def file_list_calc_total_size(file_list: List[Union[Path, str]]) -> int:
     """
     Calculates the total size of all files in the given list.
 
-    Parameters:
-    file_list (List[Union[Path, str]]): List of Path objects or strings representing the files.
+    Args:
+        file_list: List of Path objects or strings representing the files.
 
     Returns:
-    int: Total size of the files in bytes.
+        Total size of the files in bytes.
     """
     return sum(Path(file).stat().st_size for file in file_list)
 
@@ -1607,110 +1544,110 @@ def file_list_filter_by_flags(
     Each parameter has a corresponding parameter in the 'find' command
     (see the 'Find analog:' line in the documentation).
 
-    Parameters:
-    file_list (Iterable[Union[Path, str]]):
-        File and directory paths to filter.
-        Array of strings.
-        Or array of `Path` objects (`Path` are recommended).
-        Instead of arrays, can be iterators (such as `Path.iterdir()`).
-        Find analog: PATH argument
-    existing (bool, optional):
-        Filter by existing.
-        Can be `True` or `False` or `None`. Default is None.
-        If None, do not filter by existing.
-        If True, include only existing files or directories.
-        If False, include only non-existing (useful for searching for files that do not exist).
-        Find analog: no direct analog (find searches existing files by default)
-    only_files (bool, optional):
-        Filter by files.
-        Can be `True` or `False` or `None`. Default is None.
-        If None, do not filter by file type.
-        If True, include only files.
-        If False, include only non-files (directories, symlinks, etc.).
-        Find analog: "-type f"
-    only_dir (bool, optional):
-        Filter by directories.
-        Can be `True` or `False` or `None`. Default is None.
-        If None, do not filter by directory type.
-        If True, include only directories.
-        If False, include only non-directories.
-        Find analog: "-type d"
-    readable (bool, optional):
-        Filter by readable files or directories.
-        If True, include only readable files or directories. Default is None.
-        Find analog: "-readable"
-    writable (bool, optional):
-        Filter by writable files or directories.
-        If True, include only writable files or directories. Default is None.
-        Find analog: "-writable"
-    executable (bool, optional):
-        Filter by executable files or directories.
-        If True, include only executable files or directories. Default is None.
-        Find analog: "-executable"
-    hidden (bool, optional):
-        Filter by hidden files or directories.
-        If True, include only hidden files or directories. Default is None.
-        Find analog: "-name '.*'"
-    symlinks (bool, optional):
-        Filter by symbolic links.
-        If True, include only symbolic links. Default is None.
-        Find analog: "-type l"
-    size_greater_than (int, optional):
-        Filter by file size.
-        Include only files larger than this size (in bytes). Default is None.
-        Find analog: "-size +Nc"
-    size_less_than (int, optional):
-        Filter by file size.
-        Include only files smaller than this size (in bytes). Default is None.
-        Find analog: "-size -Nc"
-    extension (str, optional):
-        Filter by file extension.
-        Include only files with this extension. Default is None.
-        Find analog: "-name '*.ext'"
-    file_type (str, optional):
-        Filter by file type.
-        Include only files of this type ('f' for files, 'd' for directories, 'l' for symlinks). Default is None.
-        Find analog: "-type {f|d|l}"
-    mtime_before (datetime, optional):
-        Filter by modification time.
-        Include only files modified before this date. Default is None.
-        Find analog: "-mtime +N"
-    mtime_after (datetime, optional):
-        Filter by modification time.
-        Include only files modified after this date. Default is None.
-        Find analog: "-mtime -N"
-    atime_before (datetime, optional):
-        Filter by access time.
-        Include only files accessed before this date. Default is None.
-        Find analog: "-atime +N"
-    atime_after (datetime, optional):
-        Filter by access time.
-        Include only files accessed after this date. Default is None.
-        Find analog: "-atime -N"
-    ctime_before (datetime, optional):
-        Filter by change time.
-        Include only files changed before this date. Default is None.
-        Find analog: "-ctime +N"
-    ctime_after (datetime, optional):
-        Filter by change time.
-        Include only files changed after this date. Default is None.
-        Find analog: "-ctime -N"
-    empty (bool, optional):
-        Filter by empty files or directories.
-        If True, include only empty files or directories. Default is None.
-        Find analog: "-empty"
+    Args:
+        file_list:
+            File and directory paths to filter.
+            Array of strings.
+            Or array of `Path` objects (`Path` are recommended).
+            Instead of arrays, can be iterators (such as `Path.iterdir()`).
+            Find analog: PATH argument
+        existing:
+            Filter by existing.
+            Can be `True` or `False` or `None`. Default is None.
+            If None, do not filter by existing.
+            If True, include only existing files or directories.
+            If False, include only non-existing (useful for searching for files that do not exist).
+            Find analog: no direct analog (find searches existing files by default)
+        only_files:
+            Filter by files.
+            Can be `True` or `False` or `None`. Default is None.
+            If None, do not filter by file type.
+            If True, include only files.
+            If False, include only non-files (directories, symlinks, etc.).
+            Find analog: "-type f"
+        only_dir:
+            Filter by directories.
+            Can be `True` or `False` or `None`. Default is None.
+            If None, do not filter by directory type.
+            If True, include only directories.
+            If False, include only non-directories.
+            Find analog: "-type d"
+        readable:
+            Filter by readable files or directories.
+            If True, include only readable files or directories. Default is None.
+            Find analog: "-readable"
+        writable:
+            Filter by writable files or directories.
+            If True, include only writable files or directories. Default is None.
+            Find analog: "-writable"
+        executable:
+            Filter by executable files or directories.
+            If True, include only executable files or directories. Default is None.
+            Find analog: "-executable"
+        hidden:
+            Filter by hidden files or directories.
+            If True, include only hidden files or directories. Default is None.
+            Find analog: "-name '.*'"
+        symlinks:
+            Filter by symbolic links.
+            If True, include only symbolic links. Default is None.
+            Find analog: "-type l"
+        size_greater_than:
+            Filter by file size.
+            Include only files larger than this size (in bytes). Default is None.
+            Find analog: "-size +Nc"
+        size_less_than:
+            Filter by file size.
+            Include only files smaller than this size (in bytes). Default is None.
+            Find analog: "-size -Nc"
+        extension:
+            Filter by file extension.
+            Include only files with this extension. Default is None.
+            Find analog: "-name '*.ext'"
+        file_type:
+            Filter by file type.
+            Include only files of this type ('f' for files, 'd' for directories, 'l' for symlinks). Default is None.
+            Find analog: "-type {f|d|l}"
+        mtime_before:
+            Filter by modification time.
+            Include only files modified before this date. Default is None.
+            Find analog: "-mtime +N"
+        mtime_after:
+            Filter by modification time.
+            Include only files modified after this date. Default is None.
+            Find analog: "-mtime -N"
+        atime_before:
+            Filter by access time.
+            Include only files accessed before this date. Default is None.
+            Find analog: "-atime +N"
+        atime_after:
+            Filter by access time.
+            Include only files accessed after this date. Default is None.
+            Find analog: "-atime -N"
+        ctime_before:
+            Filter by change time.
+            Include only files changed before this date. Default is None.
+            Find analog: "-ctime +N"
+        ctime_after:
+            Filter by change time.
+            Include only files changed after this date. Default is None.
+            Find analog: "-ctime -N"
+        empty:
+            Filter by empty files or directories.
+            If True, include only empty files or directories. Default is None.
+            Find analog: "-empty"
 
-    maxdepth (int, optional):
-        Maximum depth of directories to include.
-        Default is None.
-        Find analog: "-maxdepth N"
-    mindepth (int, optional):
-        Minimum depth of directories to include.
-        Default is None.
-        Find analog: "-mindepth N"
+        maxdepth:
+            Maximum depth of directories to include.
+            Default is None.
+            Find analog: "-maxdepth N"
+        mindepth:
+            Minimum depth of directories to include.
+            Default is None.
+            Find analog: "-mindepth N"
 
     Returns:
-    List[Path]: List of Path objects that match the specified criteria.
+        List of Path objects that match the specified criteria.
     """
     res = []
 
@@ -1805,14 +1742,14 @@ def file_list_filter_by_user_group_perm(
     """
     Filters the given list of files or directories based on user, group, and permissions.
 
-    Parameters:
-    file_list (List[Union[Path, str]]): List of Path objects or strings representing the files or directories.
-    user (str | int, optional): The user name or ID to filter by. Default is None.
-    group (str | int, optional): The group name or ID to filter by. Default is None.
-    perm (str, optional): The permission string to filter by (e.g., '755'). Default is None.
+    Args:
+        file_list: List of Path objects or strings representing the files or directories.
+        user: The user name or ID to filter by. Default is None.
+        group: The group name or ID to filter by. Default is None.
+        perm: The permission string to filter by (e.g., '755'). Default is None.
 
     Returns:
-    List[Path]: List of Path objects that match the specified criteria.
+        List of Path objects that match the specified criteria.
     """
     import pwd
     import grp
@@ -1935,32 +1872,31 @@ def run_command(command: str,
     Executes a command with various options such as running in the background, capturing output, ensuring uniqueness,
     and handling custom stdin input.
 
-    Parameters:
-    - command (str): The shell command to execute.
-    - capture_output (bool): Whether to capture the command's stdout and stderr. Defaults to False.
-        If set to True, stdout and stderr are captured and can be accessed via the process object or RunOk instance.
-    - stdin_text (str | bytes): Text or bytes to send to the stdin of the subprocess.
-        This should not be used with 'stdin'.
-    - stdin (subprocess.PIPE or similar): The stdin stream for the subprocess.
-        This should not be used together with 'stdin_text'.
-    - background (bool): Whether to run the command in the background. Defaults to False.
-        If set to True, the function returns
-      immediately with a subprocess.Popen object, and you will not receive captured output or a return code.
-    - ensure_unique (bool): Ensure the command runs only if it's not already running. Defaults to False.
-    - raise_exception (bool): Whether to raise an exception if the command is already running and ensure_unique is True.
-    - hidden_console (bool): On Windows, run process detached from parent console with no window created. Defaults to False.
-        If True, process will not be killed when parent console closes, and no console window will appear.
-        Note: capture_output is ignored in this mode (output is discarded).
+    Args:
+        command: The shell command to execute.
+        capture_output: Whether to capture the command's stdout and stderr. Defaults to False.
+            If set to True, stdout and stderr are captured and can be accessed via the process object or RunOk instance.
+        stdin_text: Text or bytes to send to the stdin of the subprocess.
+            This should not be used with 'stdin'.
+        stdin: The stdin stream for the subprocess.
+            This should not be used together with 'stdin_text'.
+        background: Whether to run the command in the background. Defaults to False.
+            If set to True, the function returns
+            immediately with a subprocess.Popen object, and you will not receive captured output or a return code.
+        ensure_unique: Ensure the command runs only if it's not already running. Defaults to False.
+        raise_exception: Whether to raise an exception if the command is already running and ensure_unique is True.
+        hidden_console: On Windows, run process detached from parent console with no window created. Defaults to False.
+            If True, process will not be killed when parent console closes, and no console window will appear.
+            Note: capture_output is ignored in this mode (output is discarded).
 
     Returns:
-    - subprocess.Popen | RunOk | RunFail | RunFailProcessPresent:
-      If the `background=True` function return a `subprocess.Popen` object.
-      If the `background=False` function return a RunOk instance with captured output,
-      a `RunFail` instance with an exception if there was an exception and `raise_exception=False`,
-      or a `RunFailProcessPresent` instance if the command is already running.
+        If the `background=True` function return a `subprocess.Popen` object.
+        If the `background=False` function return a RunOk instance with captured output,
+        a `RunFail` instance with an exception if there was an exception and `raise_exception=False`,
+        or a `RunFailProcessPresent` instance if the command is already running.
 
     Raises:
-    - ValueError: If incompatible options are combined (e.g., both 'stdin_text' and 'stdin' are provided).
+        ValueError: If incompatible options are combined (e.g., both 'stdin_text' and 'stdin' are provided).
 
     Examples:
         ```
@@ -1988,10 +1924,10 @@ def run_command(command: str,
         ```
 
     Note:
-      To redirect redirect the output of the first application to the second application.
-      Ensure the first application is executed with `background=True` and `capture_output=True`.
-      Then store returned value obtained after calling the first application to the `result`.
-      And pass `result.stdout` to the `stdin` parameter when calling the second application.
+        To redirect redirect the output of the first application to the second application.
+        Ensure the first application is executed with `background=True` and `capture_output=True`.
+        Then store returned value obtained after calling the first application to the `result`.
+        And pass `result.stdout` to the `stdin` parameter when calling the second application.
     """
 
     # TODO: add argument `ensure_unique_check_param = True`
@@ -2076,16 +2012,16 @@ def run(command_string: str, background=False, capture_output=False, ensure_uniq
     """
     Executes multiple shell commands provided in a single string, separated by newlines.
 
-    Parameters:
-    - command_string (str): A string containing multiple commands separated by newlines.
-    - background (bool): Whether to run the commands in the background. Defaults to False.
-    - capture_output (bool): Whether to capture the commands' stdout. Defaults to False.
-    - ensure_unique (bool): Ensure each command runs only if it's not already running. Defaults to False.
-    - hidden_console (bool): On Windows, run process detached from parent console with no window created. Defaults to False.
+    Args:
+        command_string: A string containing multiple commands separated by newlines.
+        background: Whether to run the commands in the background. Defaults to False.
+        capture_output: Whether to capture the commands' stdout. Defaults to False.
+        ensure_unique: Ensure each command runs only if it's not already running. Defaults to False.
+        hidden_console: On Windows, run process detached from parent console with no window created. Defaults to False.
 
     Returns:
-    - If command is one - result of the `run_command` calls.
-    - If command is multiline - list of results of the `run_command` calls.
+        If command is one - result of the `run_command` calls.
+        If command is multiline - list of results of the `run_command` calls.
     """
     # TODO: add `stop_on_error=False`
     # TODO: add `print_stdout=False`
@@ -2111,17 +2047,17 @@ def proc_present(process_name: str, ignore_exe_extension: bool | typing.Any = No
     If `ignore_exe_extension` is True, it specifically ignores '.exe' extensions
     in process names during the comparison.
 
-    Parameters:
-    - proc_name (str): The name of the process to check for.
-    - ignore_exe_extension (bool, optional): Whether to ignore '.exe' extensions in process names.
-        Defaults to True (for OS Windows).
+    Args:
+        proc_name: The name of the process to check for.
+        ignore_exe_extension: Whether to ignore '.exe' extensions in process names.
+            Defaults to True (for OS Windows).
 
     Returns:
-    - bool: True if a process with the specified name is found, False otherwise.
+        True if a process with the specified name is found, False otherwise.
 
-    Example:
-    >>> proc_present("python")
-    True  # This would return True if a 'python' or 'python.exe' process is running, False otherwise.
+    Examples:
+        >>> proc_present("python")
+        True  # This would return True if a 'python' or 'python.exe' process is running, False otherwise.
     """
     if psutil is None:
         raise ImportError('The psutil library is required but not installed. Install it using `pip install psutil`')
@@ -2150,24 +2086,28 @@ def get_proc_list(skip_system=True, skip_core=True, only_system=False) -> list:
     This function iterates over all processes running on the system and optionally filters out system or
     core processes based on the given parameters. It can also be set to return only system processes.
 
-    @param skip_system: bool -- If True, system processes are skipped. Defaults to True.
-    @param skip_core: bool -- If True, core processes (those without a command line or associated user) are skipped.
-        Defaults to True.
-    @param only_system: bool -- If True, only system processes are returned. When set, `skip_system` is ignored.
-        Defaults to False.
-    @return: list[psutil.Process] -- A list of `psutil.Process` objects for the processes that meet the criteria
+    Args:
+        skip_system: If True, system processes are skipped. Defaults to True.
+        skip_core: If True, core processes (those without a command line or associated user) are skipped.
+            Defaults to True.
+        only_system: If True, only system processes are returned. When set, `skip_system` is ignored.
+            Defaults to False.
+
+    Returns:
+        A list of `psutil.Process` objects for the processes that meet the criteria
         specified by the parameters.
 
-    @details:
-    Each Process object in the list can provide various values.
-    list of possible string values: 'cmdline', 'connections', 'cpu_affinity', 'cpu_num',
-    'cpu_percent', 'cpu_times', 'create_time', 'cwd',
-    'environ', 'exe', 'gids', 'io_counters', 'ionice',
-    'memory_full_info', 'memory_info', 'memory_maps', 'memory_percent',
-    'name', 'nice', 'num_ctx_switches', 'num_fds', 'num_handles', 'num_threads',
-    'open_files', 'pid', 'ppid', 'status', 'terminal', 'threads', 'uids', 'username'`.
-    See psutil documentation for more details on these attributes.
-    https://psutil.readthedocs.io/en/latest/#psutil.Process.as_dict
+    Note:
+        Each Process object in the list can provide various values.
+        list of possible string values: 'cmdline', 'connections', 'cpu_affinity', 'cpu_num',
+        'cpu_percent', 'cpu_times', 'create_time', 'cwd',
+        'environ', 'exe', 'gids', 'io_counters', 'ionice',
+        'memory_full_info', 'memory_info', 'memory_maps', 'memory_percent',
+        'name', 'nice', 'num_ctx_switches', 'num_fds', 'num_handles', 'num_threads',
+        'open_files', 'pid', 'ppid', 'status', 'terminal', 'threads', 'uids', 'username'`.
+        See psutil documentation for more details on these attributes.
+        https://psutil.readthedocs.io/en/latest/#psutil.Process.as_dict
+
     Examples:
         ```
         # Get a list of all processes
@@ -2217,8 +2157,11 @@ def get_proc_list(skip_system=True, skip_core=True, only_system=False) -> list:
 def proc_list_to_pid_list(proc_list):
     """Convert a list of psutil.Process objects to a list of process IDs (PIDs).
 
-    @param proc_list: list[psutil.Process] -- List of process objects from the psutil library.
-    @return: list[int] -- List of process IDs.
+    Args:
+        proc_list: List of process objects from the psutil library.
+
+    Returns:
+        List of process IDs.
     """
     if psutil is None:
         raise ImportError('The psutil library is required but not installed. Install it using `pip install psutil`')
@@ -2231,8 +2174,11 @@ def proc_list_to_pid_list(proc_list):
 def proc_list_to_names_list(proc_list):
     """Convert a list of psutil.Process objects to a list of process names.
 
-    @param proc_list: list[psutil.Process] -- List of process objects from the psutil library.
-    @return: list[str] -- List of process names.
+    Args:
+        proc_list: List of process objects from the psutil library.
+
+    Returns:
+        List of process names.
     """
     if psutil is None:
         raise ImportError('The psutil library is required but not installed. Install it using `pip install psutil`')
@@ -2245,9 +2191,12 @@ def proc_list_to_names_list(proc_list):
 def proc_list_to_dict(proc_list, attrs):
     """Convert a list of psutil.Process objects to a list of dictionaries representing process attributes.
 
-    @param proc_list: list[psutil.Process] -- List of process objects from the psutil library.
-    @param attrs: list[str] -- List of attributes to retrieve for each process.
-    @return: list[dict] -- List of dictionaries with keys as attributes and
+    Args:
+        proc_list: List of process objects from the psutil library.
+        attrs: List of attributes to retrieve for each process.
+
+    Returns:
+        List of dictionaries with keys as attributes and
         values as the corresponding process information.
     """
     if psutil is None:
@@ -2277,24 +2226,24 @@ def str_to_bool(value: str | bool | int, raise_exception: bool = True) -> bool |
     """
     Parse a boolean from a string, bool, or 0/1 int.
 
-    Strings are stripped and compared case-insensitively. True values are
-    '1', 'true', 'yes', 'y', 'on', 't'. False values are '0', 'false',
-    'no', 'n', 'off', 'f' (the set from the removed distutils.util.strtobool).
+    Strings are stripped and compared case-insensitively. 
+    True values are '1', 'true', 'yes', 'y', 'on'. 
+    False values are '0', 'false', 'no', 'n', 'off'.
 
-    Parameters:
-    value (str | bool | int): Value to interpret. A bool is returned as is.
-        Integers must be 0 or 1.
-    raise_exception (bool): When True, invalid input raises ValueError.
-        When False, invalid input returns None. Default is True.
+    Args:
+        value: Value to interpret. A bool is returned as is.
+            Integers must be 0 or 1.
+        raise_exception: When True, invalid input raises ValueError.
+            When False, invalid input returns None. Default is True.
 
     Returns:
-    bool | None: Parsed boolean, or None when raise_exception is False.
+        Parsed boolean, or None when raise_exception is False.
 
     Examples:
-    > str_to_bool('yes')
-    > True
-    > str_to_bool('off')
-    > False
+        > str_to_bool('yes')
+        > True
+        > str_to_bool('off')
+        > False
     """
     if isinstance(value, bool):
         return value
@@ -2303,9 +2252,9 @@ def str_to_bool(value: str | bool | int, raise_exception: bool = True) -> bool |
             return bool(value)
     elif isinstance(value, str):
         normalized = value.strip().lower()
-        if normalized in {'1', 'true', 'yes', 'y', 'on', 't'}:
+        if normalized in {'1', 'true', 'yes', 'y', 'on'}:
             return True
-        if normalized in {'0', 'false', 'no', 'n', 'off', 'f'}:
+        if normalized in {'0', 'false', 'no', 'n', 'off'}:
             return False
     if raise_exception:
         raise ValueError(f'Invalid boolean value: {value!r}')
@@ -2320,21 +2269,22 @@ def safe_filename(name: str | None, default: str = 'untitled', allowed: str = ' 
     The result is stripped. An empty result, including a name made only of
     removed characters, is replaced with `default`.
 
-    Parameters:
-    name (str | None): Source text. None is treated as empty.
-    default (str): Value used when the filtered name is empty. Default is 'untitled'.
-    allowed (str): Extra characters to keep besides alphanumerics. Default is ' _-'.
-        Pass ' _-.' to keep a file extension.
+    Args:
+        name: Source text. None is treated as empty.
+        default: Value used when the filtered name is empty. Default is 'untitled'.
+        allowed: Extra characters to keep besides alphanumerics. Default is ' _-'.
+            Pass ' _-.' to keep a file extension.
 
     Returns:
-    str: Safe file name.
+        Safe file name.
 
     Examples:
-    > safe_filename('Hello, world!')
-    > 'Hello world'
-    > safe_filename('***')
-    > 'untitled'
+        > safe_filename('Hello, world!')
+        > 'Hello world'
+        > safe_filename('***')
+        > 'untitled'
     """
+    # TODO: доработать эту функцию, покачто она какая-то сырая и непонятная.
     filtered = ''.join(c for c in (name or '') if c.isalnum() or c in allowed)
     filtered = filtered.strip()
     if not filtered:
@@ -2352,12 +2302,6 @@ def get_filename(path: Path | str) -> Path:
 def datetime_trim_ms(t: datetime | time) -> datetime | time:
     """
     Trims milliseconds from a datetime or time object.
-
-    Parameters:
-    - t (datetime | time): The datetime or time object from which milliseconds are to be trimmed.
-
-    Returns:
-    - datetime | time: A new datetime or time object without milliseconds.
     """
     if isinstance(t, datetime):
         return datetime(t.year, t.month, t.day, t.hour, t.minute, t.second)
@@ -2370,12 +2314,6 @@ def datetime_trim_ms(t: datetime | time) -> datetime | time:
 def datetime_trim_second(t: datetime | time) -> datetime | time:
     """
     Trims seconds from a datetime or time object.
-
-    Parameters:
-    - t (datetime | time): The datetime or time object from which seconds are to be trimmed.
-
-    Returns:
-    - datetime | time: A new datetime or time object without seconds.
     """
     if isinstance(t, datetime):
         return datetime(t.year, t.month, t.day, t.hour, t.minute)
@@ -2477,9 +2415,6 @@ def datetime_to_yyyy_mm_dd(
         delimiter: str = '-') -> str:
     """
     Convert time to 'YYYY-MM-DD' format.
-    Example:
-        > datetime_to_yyyy_mm_dd(now())
-        > '2024-12-16'
     """
     return datetime_to_str(time_value, f'YYYY{delimiter}MO{delimiter}DD')
 
@@ -2489,9 +2424,6 @@ def datetime_to_hh_mm_ss(
         delimiter: str = ':') -> str:
     """
     Convert time to 'HH:MM:SS' format.
-    Example:
-        > datetime_to_hh_mm_ss(datetime.now(), delimiter=':')
-        > '08:16:32'
     """
     return datetime_to_str(time_value, f'HH{delimiter}MN{delimiter}SS')
 
@@ -2501,9 +2433,6 @@ def datetime_to_hh_mm(
         delimiter: str = ':') -> str:
     """
     Convert time to 'HH:MM' format.
-    Example:
-        > datetime_to_hh_mm(datetime.now(), delimiter=':')
-        > '08:16'
     """
     return datetime_to_str(time_value, f'HH{delimiter}MN')
 
@@ -2525,20 +2454,8 @@ def duration_to_str(seconds: float | int | timedelta) -> str:
     are formatted with whole seconds. Rounding is done in milliseconds
     before splitting, so 59.9996 becomes '1m 0.000s'.
 
-    Parameters:
-    seconds (float | int | timedelta): Duration. A timedelta is converted
-        with total_seconds().
-
     Returns:
-    str: Human-readable duration. Negative values start with '-'.
-
-    Examples:
-    > duration_to_str(42)
-    > '42.000s'
-    > duration_to_str(83.4)
-    > '1m 23.400s'
-    > duration_to_str(3723)
-    > '1h 2m 3s'
+        Human-readable duration. Negative values start with '-'.
     """
     total_ms = round(_duration_to_seconds(seconds) * 1000)
     sign = '-' if total_ms < 0 else ''
@@ -2557,20 +2474,20 @@ def duration_to_mm_ss(seconds: float | int | timedelta) -> str:
     """
     Format a duration as MM:SS. Minutes may exceed 59.
 
-    Parameters:
-    seconds (float | int | timedelta): Duration. A timedelta is converted
-        with total_seconds().
+    Args:
+        seconds: Duration. A timedelta is converted
+            with total_seconds().
 
     Returns:
-    str: Zero-padded minutes and seconds. Negative values start with '-'.
+        Zero-padded minutes and seconds. Negative values start with '-'.
 
     Examples:
-    > duration_to_mm_ss(75)
-    > '01:15'
-    > duration_to_mm_ss(3600)
-    > '60:00'
-    > duration_to_mm_ss(-65)
-    > '-01:05'
+        > duration_to_mm_ss(75)
+        > '01:15'
+        > duration_to_mm_ss(3600)
+        > '60:00'
+        > duration_to_mm_ss(-65)
+        > '-01:05'
     """
     total = int(round(_duration_to_seconds(seconds)))
     sign = '-' if total < 0 else ''
@@ -2586,19 +2503,19 @@ def duration_parse(s: str, raise_exception: bool = False) -> float | None:
     for minutes. Hours, minutes, and seconds are each optional, and at least
     one part must be present. Examples: '1.54s', '5min 59s', '1h 2m 3s', '1h'.
 
-    Parameters:
-    s (str): Duration text.
-    raise_exception (bool): When True, invalid input raises ValueError.
-        When False, invalid input returns None. Default is False.
+    Args:
+        s: Duration text.
+        raise_exception: When True, invalid input raises ValueError.
+            When False, invalid input returns None. Default is False.
 
     Returns:
-    float | None: Seconds rounded to 3 decimal places, or None.
+        Seconds rounded to 3 decimal places, or None.
 
     Examples:
-    > duration_parse('1m 23.400s')
-    > 83.4
-    > duration_parse('nope')
-    > None
+        > duration_parse('1m 23.400s')
+        > 83.4
+        > duration_parse('nope')
+        > None
     """
     if not isinstance(s, str):
         raise TypeError('Expected str.')
@@ -2661,36 +2578,26 @@ def datetime_parse(
     """
     Parses a string containing a date and time in various formats into a `datetime` object.
 
-    :param s:
-        The string to parse.
-    :param raise_exception:
-        If `True`, raises an exception on parsing errors. If `False`, returns `None` on failure. Default is `False`.
-    :param delimiter_date:
-        Delimiters used between date components (year, month, day). Can be a single string or a list of strings. Default is `['-', '/']`.
-    :param delimiter_time:
-        Delimiters used between time components (hour, minute, second). Can be a single string or a list of strings. Default is `['-', ':']`.
-    :param delimiter_date_time:
-        Delimiters used between the date and time parts. Can be a single string or a list of strings. Default is `[' ', '_', '-', 'T']`.
-    :param require_start:
-        If `True`, the date must be at the start of the string (adds `^` in regex). If `False`, no requirement. If a string, it is used as the starting pattern in regex. Default is `False`.
-    :param require_end:
-        If `True`, the date must be at the end of the string (adds `$` in regex). If `False`, no requirement. If a string, it is used as the ending pattern in regex. Default is `False`.
-    :param iso:
-        If `True`, only matches ISO 8601 format (`YYYY-MM-DD HH:MM[:SS]`). Default is `False`.
-    :param iso_basic:
-        If `True`, only matches basic ISO 8601 format without delimiters (`YYYYMMDDHHMMSS`). Default is `False`.
-    :param no_time:
-        If `True`, only matches date parts (no time required). Default is `False`.
+    Args:
+        s: The string to parse.
+        raise_exception: If `True`, raises an exception on parsing errors. If `False`, returns `None` on failure. Default is `False`.
+        delimiter_date: Delimiters used between date components (year, month, day). Can be a single string or a list of strings. Default is `['-', '/']`.
+        delimiter_time: Delimiters used between time components (hour, minute, second). Can be a single string or a list of strings. Default is `['-', ':']`.
+        delimiter_date_time: Delimiters used between the date and time parts. Can be a single string or a list of strings. Default is `[' ', '_', '-', 'T']`.
+        require_start: If `True`, the date must be at the start of the string (adds `^` in regex). If `False`, no requirement. If a string, it is used as the starting pattern in regex. Default is `False`.
+        require_end: If `True`, the date must be at the end of the string (adds `$` in regex). If `False`, no requirement. If a string, it is used as the ending pattern in regex. Default is `False`.
+        iso: If `True`, only matches ISO 8601 format (`YYYY-MM-DD HH:MM[:SS]`). Default is `False`.
+        iso_basic: If `True`, only matches basic ISO 8601 format without delimiters (`YYYYMMDDHHMMSS`). Default is `False`.
+        no_time: If `True`, only matches date parts (no time required). Default is `False`.
 
-    :return:
+    Returns:
         A `datetime` object if parsing is successful, otherwise `None`.
 
-    :raises ValueError:
-        If the string does not match any expected format or contains invalid date/time, and `raise_exception` is `True`.
-    :raises TypeError:
-        If any of the delimiter parameters are neither strings nor lists of strings.
+    Raises:
+        ValueError: If the string does not match any expected format or contains invalid date/time, and `raise_exception` is `True`.
+        TypeError: If any of the delimiter parameters are neither strings nor lists of strings.
 
-    .. note::
+    Note:
         The function attempts to parse the input string using multiple date and time formats.
         It returns the first successfully parsed `datetime` object.
 
@@ -2704,25 +2611,24 @@ def datetime_parse(
 
         Delimiters can be customized to match various date and time formats.
 
-    **Examples**:
+    Examples:
+        >>> datetime_parse("2022-12-31 23:59:59")
+        datetime.datetime(2022, 12, 31, 23, 59, 59)
 
-    >>> datetime_parse("2022-12-31 23:59:59")
-    datetime.datetime(2022, 12, 31, 23, 59, 59)
+        >>> datetime_parse("2022/12/31_23-59", delimiter_date='/', delimiter_time='-')
+        datetime.datetime(2022, 12, 31, 23, 59)
 
-    >>> datetime_parse("2022/12/31_23-59", delimiter_date='/', delimiter_time='-')
-    datetime.datetime(2022, 12, 31, 23, 59)
+        >>> datetime_parse("2022-12-31 23:59 Log", require_end=True)
+        None
 
-    >>> datetime_parse("2022-12-31 23:59 Log", require_end=True)
-    None
+        >>> datetime_parse("20221231T235959", delimiter_date_time='T', iso_basic=True)
+        datetime.datetime(2022, 12, 31, 23, 59, 59)
 
-    >>> datetime_parse("20221231T235959", delimiter_date_time='T', iso_basic=True)
-    datetime.datetime(2022, 12, 31, 23, 59, 59)
+        >>> datetime_parse("2022-12-31", no_time=True)
+        datetime.datetime(2022, 12, 31, 0, 0)
 
-    >>> datetime_parse("2022-12-31", no_time=True)
-    datetime.datetime(2022, 12, 31, 0, 0)
-
-    >>> datetime_parse("Invalid date", raise_exception=False)
-    None
+        >>> datetime_parse("Invalid date", raise_exception=False)
+        None
     """
 
     # Default values
@@ -2864,12 +2770,12 @@ def dict_cast_values(dict_values: Dict[str, Any], default_values: Dict[str, Any]
     """
     Recursively cast the dict values to the types of the default values.
 
-    Parameters:
-    dict_values (Dict[str, Any]): The values from the dict.
-    default_values (Dict[str, Any]): The default values with types.
+    Args:
+        dict_values: The values from the dict.
+        default_values: The default values with types.
 
     Returns:
-    Dict[str, Any]: The dict values with casted types.
+        The dict values with casted types.
     """
     dict_values_casted = {}
     for key, default_value in default_values.items():
@@ -2900,6 +2806,7 @@ def _parse_bool_config_value(value: Any) -> bool | None:
     Accepted: True, False, 1, 0, and strings true/false/yes/no
     (case-insensitive, surrounding whitespace ignored).
     """
+    # TODO: replace to str_to_bool
     if type(value) is bool:
         return value
     if type(value) is int and value in (0, 1):
@@ -2922,6 +2829,7 @@ def _coerce_config_value(existing: Any, value: Any) -> tuple[bool, Any]:
     if type(existing) is float and type(value) is int:
         return True, float(value)
     if type(existing) is bool:
+    # TODO: replace to str_to_bool
         coerced = _parse_bool_config_value(value)
         if coerced is not None:
             return True, coerced
@@ -3086,12 +2994,12 @@ def load_from_json_stream(json_file: Path | str, encoding: str = 'utf-8') -> lis
     at a time. Whitespace between values is skipped, so both NDJSON and
     pretty-printed objects written one after another are accepted.
 
-    Parameters:
-    json_file (Path | str): Path to the JSON stream.
-    encoding (str): File encoding. Default is 'utf-8'.
+    Args:
+        json_file: Path to the JSON stream.
+        encoding: File encoding. Default is 'utf-8'.
 
     Returns:
-    list: Decoded JSON values, in order.
+        Decoded JSON values, in order.
     """
     text = get_file_content(json_file, encoding=encoding)
     decoder = json.JSONDecoder()
@@ -3115,11 +3023,11 @@ def json_iter_records(data) -> Iterator[dict]:
     is yielded only when it is an element of a list. A yielded record is not
     descended into, so dicts nested inside that record are not yielded.
 
-    Parameters:
-    data: A JSON-like structure of dicts and lists.
+    Args:
+        data: A JSON-like structure of dicts and lists.
 
     Returns:
-    Iterator[dict]: Matching records.
+        Matching records.
     """
     if isinstance(data, dict):
         for value in data.values():
