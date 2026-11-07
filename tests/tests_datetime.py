@@ -348,14 +348,14 @@ class TestDuration(unittest.TestCase):
     """Duration format and parse helpers."""
 
     def test_duration_to_str(self):
-        self.assertEqual(duration_to_str(42), '42.000s')
-        self.assertEqual(duration_to_str(83.4), '1m 23.400s')
+        self.assertEqual(duration_to_str(42), '42s')
+        self.assertEqual(duration_to_str(83.4), '1m 23s')
         self.assertEqual(duration_to_str(3723), '1h 2m 3s')
-        self.assertEqual(duration_to_str(59.9996), '1m 0.000s')
-        self.assertEqual(duration_to_str(timedelta(seconds=42)), '42.000s')
+        self.assertEqual(duration_to_str(59.9996), '1m 0s')
+        self.assertEqual(duration_to_str(timedelta(seconds=42)), '42s')
         self.assertEqual(
             duration_to_str(timedelta(seconds=83, milliseconds=400)),
-            '1m 23.400s',
+            '1m 23s',
         )
 
     def test_duration_to_mm_ss(self):

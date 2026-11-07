@@ -2448,26 +2448,25 @@ def _duration_to_seconds(seconds: float | int | timedelta) -> float:
 
 def duration_to_str(seconds: float | int | timedelta) -> str:
     """
-    Format a duration as '42.000s', '1m 23.400s', or '1h 2m 3s'.
+    Format a duration as '42s', '1m 23s', or '1h 2m 3s'.
 
-    Sub-hour values keep millisecond precision. Values of one hour or more
-    are formatted with whole seconds. Rounding is done in milliseconds
-    before splitting, so 59.9996 becomes '1m 0.000s'.
+    Values are rounded to the nearest whole second before splitting,
+    so 59.9996 becomes '1m 0s'.
 
     Returns:
         Human-readable duration. Negative values start with '-'.
     """
-    total_ms = round(_duration_to_seconds(seconds) * 1000)
-    sign = '-' if total_ms < 0 else ''
-    total_s, ms = divmod(abs(total_ms), 1000)
+    total_s = int(round(_duration_to_seconds(seconds)))
+    sign = '-' if total_s < 0 else ''
+    total_s = abs(total_s)
     if total_s >= 3600:
         hours, rem = divmod(total_s, 3600)
         minutes, secs = divmod(rem, 60)
         return f'{sign}{hours}h {minutes}m {secs}s'
     if total_s >= 60:
         minutes, secs = divmod(total_s, 60)
-        return f'{sign}{minutes}m {secs}.{ms:03d}s'
-    return f'{sign}{total_s}.{ms:03d}s'
+        return f'{sign}{minutes}m {secs}s'
+    return f'{sign}{total_s}s'
 
 
 def duration_to_mm_ss(seconds: float | int | timedelta) -> str:
