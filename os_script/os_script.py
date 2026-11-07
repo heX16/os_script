@@ -2914,13 +2914,7 @@ def _parse_bool_config_value(value: Any) -> bool | None:
 
 
 def _coerce_config_value(existing: Any, value: Any) -> tuple[bool, Any]:
-    """
-    Return (True, coerced) when value may replace existing, else (False, None).
-
-    None accepts any type. Exact types match. float accepts int (stored as
-    float). bool accepts 0, 1, True, False, and strings true/false/yes/no.
-    bool and int stay separate except for that bool list (type(...) is).
-    """
+    """Return (True, coerced) when value may replace existing, else (False, None)."""
     if existing is None:
         return True, value
     if type(existing) is type(value):
@@ -2935,19 +2929,7 @@ def _coerce_config_value(existing: Any, value: Any) -> tuple[bool, Any]:
 
 
 def _set_global_variables(config: Dict[str, Any], namespace: Dict[str, Any]) -> None:
-    """
-    Set predeclared variables in namespace from config.
-
-    Only names already present in namespace are updated. A value is written
-    when the existing value is None, has the same type, is float and the
-    config value is int (stored as float), or is bool and the config value
-    is 0, 1, True, False, or the strings true/false/yes/no. Other keys are
-    skipped quietly.
-
-    Parameters:
-    config (Dict[str, Any]): Configuration dictionary
-    namespace (Dict[str, Any]): Caller globals to update
-    """
+    """Update predeclared names in namespace via ``_coerce_config_value``."""
     for key, value in config.items():
         if key not in namespace:
             continue
@@ -2958,27 +2940,36 @@ def _set_global_variables(config: Dict[str, Any], namespace: Dict[str, Any]) -> 
 
 
 def load_config_from_dict(config: Dict[str, Any], default_values: Dict[str, Any]) -> None:
-    """
-    Cast config values and set predeclared global variables.
+    """Cast config values and assign them to predeclared globals.
 
-    Declare expected names in the caller first. Only those names are filled;
-    other keys are ignored. None accepts any type; float accepts int; bool
-    accepts 0, 1, True, False, and the strings true/false/yes/no.
+    Declare expected names in the caller first. Only those names are
+    filled; other keys are ignored.
 
-    load_config_from_yaml, load_config_from_ini, and load_config_from_json
-    read (or create) a file, then apply the same rules.
+    Type rules:
+        * ``None`` accepts any type.
+        * ``float`` accepts ``int`` (stored as ``float``).
+        * ``bool`` accepts ``0``, ``1``, ``True``, ``False``, and the
+          strings ``true`` / ``false`` / ``yes`` / ``no``.
+        * ``bool`` and ``int`` are otherwise kept separate.
 
-    Parameters:
-    config (Dict[str, Any]): Configuration values
-    default_values (Dict[str, Any]): Default config values with types
+    File loaders ``load_config_from_yaml``, ``load_config_from_ini``,
+    and ``load_config_from_json`` read (or create) a file, then apply
+    the same rules.
 
-    Types handled: bool, int, float, Path, Dict. Others kept as strings.
+    Args:
+        config: Values from the config source.
+        default_values: Defaults; their types drive casting
+            (bool, int, float, Path, dict; others kept as-is).
 
     Examples:
-    > debug = False
-    > retries = 0
-    > load_config_from_dict({'debug': True, 'retries': 3}, {'debug': False, 'retries': 0})
-    > print(retries)
+        >>> debug = False
+        >>> retries = 0
+        >>> load_config_from_dict(
+        ...     {'debug': True, 'retries': 3},
+        ...     {'debug': False, 'retries': 0},
+        ... )
+        >>> retries
+        3
     """
     caller_globals = inspect.currentframe().f_back.f_globals
     casted_config = dict_cast_values(config, default_values)
@@ -2986,10 +2977,10 @@ def load_config_from_dict(config: Dict[str, Any], default_values: Dict[str, Any]
 
 
 def load_config_from_yaml(config_file: Path, default_values: Dict[str, Any]) -> None:
-    """
-    Load config from YAML file or create with defaults.
+    """Load config from a YAML file, or create the file with defaults.
 
-    See load_config_from_dict for how values are cast and written to globals.
+    See Also:
+        load_config_from_dict: Casting, predeclared names, and type rules.
     """
 
     import yaml
@@ -3012,10 +3003,13 @@ def load_config_from_yaml(config_file: Path, default_values: Dict[str, Any]) -> 
 
 
 def load_config_from_ini(config_file: Path, default_values: Dict[str, Any], section_name: str = 'DEFAULT') -> None:
-    """
-    Load config from INI file or create with defaults.
+    """Load config from an INI file, or create the file with defaults.
 
-    See load_config_from_dict for how values are cast and written to globals.
+    Args:
+        section_name: INI section to read or create. Default is 'DEFAULT'.
+
+    See Also:
+        load_config_from_dict: Casting, predeclared names, and type rules.
     """
 
     import configparser
@@ -3041,10 +3035,10 @@ def load_config_from_ini(config_file: Path, default_values: Dict[str, Any], sect
 
 
 def load_config_from_json(config_file: Path, default_values: Dict[str, Any]) -> None:
-    """
-    Load config from JSON file or create with defaults.
+    """Load config from a JSON file, or create the file with defaults.
 
-    See load_config_from_dict for how values are cast and written to globals.
+    See Also:
+        load_config_from_dict: Casting, predeclared names, and type rules.
     """
 
     caller_globals = inspect.currentframe().f_back.f_globals
