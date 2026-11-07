@@ -109,6 +109,7 @@
 
 ## Config helpers
 
+- `load_config_from_dict`
 - `load_config_from_yaml`
 - `load_config_from_ini`
 - `load_config_from_json`

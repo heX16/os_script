@@ -57,7 +57,7 @@ run_checked(f'"{sys.executable}" -m build')
 
 # Find wheel by mask (more robust than a fixed filename)
 dist_dir = Path('dist')
-wheel_files = list(find(dist_dir, f'os_script-{version}-*.whl'))
+wheel_files = find(dist_dir, f'os_script-{version}-*.whl')
 wheel_files = file_list_sort_by_name(wheel_files)
 
 if wheel_files:
