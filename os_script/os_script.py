@@ -1223,17 +1223,10 @@ def get_dir_size(
             with os.scandir(dirpath) as it:
                 for entry in it:
                     try:
-                        if entry.is_symlink():
-                            if follow_dir_symlinks and entry.is_dir(follow_symlinks=True):
-                                subdirs.append(entry.path)
-                            elif follow_file_symlinks and entry.is_file(follow_symlinks=True):
-                                total += entry.stat(follow_symlinks=True).st_size
-                            continue
-
-                        if entry.is_file(follow_symlinks=False):
-                            total += entry.stat(follow_symlinks=False).st_size
-                        elif entry.is_dir(follow_symlinks=False):
+                        if entry.is_dir() and (follow_dir_symlinks or not entry.is_symlink()):
                             subdirs.append(entry.path)
+                        elif entry.is_file() and (follow_file_symlinks or not entry.is_symlink()):
+                            total += entry.stat().st_size
                     except OSError:
                         if raise_exception:
                             raise
