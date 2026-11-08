@@ -1,7 +1,8 @@
 # Same release steps as build_and_install.py, written with os_script helpers.
-# Import the package from this repository so an older installed copy is not used instead.
+# Always load the package that sits next to this script, never an installed copy.
 
 import argparse
+import importlib.util
 import re
 import sys
 from pathlib import Path
@@ -16,9 +17,32 @@ parser.add_argument(
 )
 args = parser.parse_args()
 
-repo_root = Path(__file__).resolve().parent
-sys.path.insert(0, str(repo_root))
 
+def load_local_os_script(repo_root: Path) -> None:
+    """Load the os_script package that sits next to this script."""
+    package_dir = repo_root / 'os_script'
+    package_init = package_dir / '__init__.py'
+    if not package_init.is_file():
+        print(f'Local os_script package not found: {package_init}')
+        exit(1)
+
+    # An installed copy may already be in memory. Drop it so the inner import uses this folder.
+    for name in list(sys.modules):
+        if name == 'os_script' or name.startswith('os_script.'):
+            del sys.modules[name]
+
+    spec = importlib.util.spec_from_file_location(
+        'os_script',
+        package_init,
+        submodule_search_locations=[str(package_dir)],
+    )
+    module = importlib.util.module_from_spec(spec)
+    sys.modules['os_script'] = module
+    spec.loader.exec_module(module)
+
+
+repo_root = Path(__file__).resolve().parent
+load_local_os_script(repo_root)
 from os_script import *
 
 
