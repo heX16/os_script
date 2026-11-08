@@ -909,7 +909,7 @@ def rename_only(filename: Path | str, new_filename: Path | str):
 
     The function renames the file located at the specified path by changing its name to new_filename,
     while ensuring that both the current file and the new name are in the same directory.
-    If `new_filename` contains more than one path segment, 
+    If `new_filename` contains more than one path segment,
     the function raise exception `ValueError`.
     """
     filename = Path(filename)
@@ -1181,7 +1181,7 @@ def get_dir_size(
     raise_exception: bool = True,
     follow_dir_symlinks: bool = False,
     follow_file_symlinks: bool = False,
-    same_fs_only: bool = False,
+    same_fs_only: bool = True,
 ) -> int:
     """
     Sum file sizes under the directory.
@@ -1265,10 +1265,7 @@ def get_dir_size(
 def get_file_size(
     file_path: Path | str,
     calc_dir_size: bool = True,
-    raise_exception: bool = True,
-    follow_dir_symlinks: bool = False,
-    follow_file_symlinks: bool = False,
-    same_fs_only: bool = False,
+    raise_exception: bool = True
 ) -> int:
     """
     Return the size of a file in bytes.
@@ -1283,10 +1280,6 @@ def get_file_size(
             Default is True. If False, use `stat().st_size` of the path itself.
         raise_exception: If True, raise on missing path or I/O errors.
             If False, return 0. Default is True.
-        follow_dir_symlinks: Passed to `get_dir_size` when measuring a directory.
-        follow_file_symlinks: Passed to `get_dir_size` when measuring a directory.
-        same_fs_only: Passed to `get_dir_size` when measuring a directory.
-            Default is False.
 
     Returns:
         Size in bytes.
@@ -1294,16 +1287,9 @@ def get_file_size(
     path = Path(file_path)
     try:
         if calc_dir_size and path.is_dir():
-            return get_dir_size(
-                path,
-                raise_exception=raise_exception,
-                follow_dir_symlinks=follow_dir_symlinks,
-                follow_file_symlinks=follow_file_symlinks,
-                same_fs_only=same_fs_only,
-            )
-        # Follow symlinks so the caller gets the target file size, not the
-        # (often zero) size of the link node.
-        return os.stat(path, follow_symlinks=True).st_size
+            return get_dir_size(path, raise_exception=raise_exception)
+
+        return os.stat(path).st_size
     except OSError:
         if not raise_exception:
             return 0
@@ -2345,8 +2331,8 @@ def str_to_bool(value: str | bool | int, raise_exception: bool = True) -> bool |
     """
     Parse a boolean from a string, bool, or 0/1 int.
 
-    Strings are stripped and compared case-insensitively. 
-    True values are '1', 'true', 'yes', 'y', 'on'. 
+    Strings are stripped and compared case-insensitively.
+    True values are '1', 'true', 'yes', 'y', 'on'.
     False values are '0', 'false', 'no', 'n', 'off'.
 
     Args:
