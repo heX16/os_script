@@ -1,8 +1,19 @@
 # Note: For obvious reasons, this file does not use `os_script` library functions.
 
+import argparse
 import subprocess
 import re
 from pathlib import Path
+
+parser = argparse.ArgumentParser(
+    description='Build and install os_script. Pass --public to upload to PyPI.'
+)
+parser.add_argument(
+    '--public',
+    action='store_true',
+    help='Upload the built distributions for this version to PyPI',
+)
+args = parser.parse_args()
 
 # Path to the target Python file
 file_path = Path('os_script/os_script.py')
@@ -63,13 +74,23 @@ dist_dir = Path('dist')
 wheel_file = dist_dir / f'os_script-{version}-py3-none-any.whl'
 
 # Build the project
-subprocess.run(['pip', 'install', 'build'])
-subprocess.run(['python', '-m', 'build'])
+subprocess.run(['pip', 'install', 'build'], check=True)
+subprocess.run(['python', '-m', 'build'], check=True)
 
 # Check if the wheel file exists
 if wheel_file.exists():
     print(f'Installing version: {wheel_file}')
     # Install the wheel file
-    subprocess.run(['pip', 'install', str(wheel_file), '--force-reinstall'])
+    subprocess.run(['pip', 'install', str(wheel_file), '--force-reinstall'], check=True)
 else:
     print(f'Wheel file {wheel_file} not found in {dist_dir}')
+    exit(1)
+
+if args.public:
+    artifacts = sorted(str(path) for path in dist_dir.glob(f'os_script-{version}*'))
+    if not artifacts:
+        print(f'No distribution files for version {version} in {dist_dir}')
+        exit(1)
+    print('Uploading to PyPI:', ', '.join(artifacts))
+    subprocess.run(['pip', 'install', 'twine'], check=True)
+    subprocess.run(['python', '-m', 'twine', 'upload', *artifacts], check=True)

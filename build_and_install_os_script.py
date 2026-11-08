@@ -1,12 +1,23 @@
 # Example: rewrite of build_and_install.py using os_script library helpers.
 # Original script at repo root is left unchanged.
 
+import argparse
 import re
 import sys
 from pathlib import Path
 
-# Bootstrap local package import when running from examples/
-repo_root = Path(__file__).resolve().parents[1]
+parser = argparse.ArgumentParser(
+    description='Build and install os_script. Pass --public to upload to PyPI.'
+)
+parser.add_argument(
+    '--public',
+    action='store_true',
+    help='Upload the built distributions for this version to PyPI',
+)
+args = parser.parse_args()
+
+# Bootstrap local package import when running from the repository root.
+repo_root = Path(__file__).resolve().parent
 sys.path.insert(0, str(repo_root))
 
 from os_script import *
@@ -67,3 +78,13 @@ if wheel_files:
 else:
     print(f'Wheel file matching os_script-{version}-*.whl not found in {dist_dir}')
     exit(1)
+
+if args.public:
+    artifacts = file_list_sort_by_name(find(dist_dir, f'os_script-{version}-*'))
+    if not artifacts:
+        print(f'No distribution files for version {version} in {dist_dir}')
+        exit(1)
+    print('Uploading to PyPI:', ', '.join(str(path) for path in artifacts))
+    run_checked(f'"{sys.executable}" -m pip install twine')
+    quoted = ' '.join(f'"{path}"' for path in artifacts)
+    run_checked(f'"{sys.executable}" -m twine upload {quoted}')
