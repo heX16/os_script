@@ -1,5 +1,5 @@
-# Example: rewrite of build_and_install.py using os_script library helpers.
-# Original script at repo root is left unchanged.
+# Same release steps as build_and_install.py, written with os_script helpers.
+# Import the package from this repository so an older installed copy is not used instead.
 
 import argparse
 import re
@@ -16,7 +16,6 @@ parser.add_argument(
 )
 args = parser.parse_args()
 
-# Bootstrap local package import when running from the repository root.
 repo_root = Path(__file__).resolve().parent
 sys.path.insert(0, str(repo_root))
 
@@ -24,27 +23,21 @@ from os_script import *
 
 
 def run_checked(command: str) -> None:
-    """Run a shell command and exit on non-zero return code."""
-    result = run_command(command, capture_output=True)
+    """A failed build or upload must stop the release."""
+    result = run_command(command)
     if result.returncode != 0:
-        stderr = result.stderr.read() if result.stderr else ''
-        stdout = result.stdout.read() if result.stdout else ''
         print(f'Command failed ({result.returncode}): {command}')
-        if stdout:
-            print(stdout)
-        if stderr:
-            print(stderr)
         exit(result.returncode)
 
 
-# Ensure relative paths resolve from the repository root
+# Commands below use paths relative to the repository, not to the caller's working directory.
 cd(repo_root)
 
-# Version from the library itself (instead of parsing source with regex)
+# The version users see is os_script_version(). pyproject.toml must carry the same value, because pip and PyPI read it from there.
 version = os_script_version()
 print('Version "os_script":', version)
 
-# Sync version into pyproject.toml
+# Write that version into pyproject.toml only when it differs, so a rerun does not touch the file for no reason.
 pyproject_path = Path('pyproject.toml')
 pyproject_text = get_file_content(pyproject_path)
 
@@ -62,29 +55,37 @@ else:
     print('Version line not found in pyproject.toml')
     exit(1)
 
-# Build the project
-run_checked(f'"{sys.executable}" -m pip install build')
-run_checked(f'"{sys.executable}" -m build')
+# Build with the interpreter that runs this script. `pip` and `python` on PATH may be a different installation.
+py = sys.executable
+run_checked(f'"{py}" -m pip install build')
+run_checked(f'"{py}" -m build')
 
-# Find wheel by mask (more robust than a fixed filename)
+# This version only. A bare prefix such as `0.5.8*` would also match `0.5.80`.
+# The sdist is `name-version.tar.gz`; wheels are `name-version-...whl`.
 dist_dir = Path('dist')
-wheel_files = find(dist_dir, f'os_script-{version}-*.whl')
-wheel_files = file_list_sort_by_name(wheel_files)
+prefix = f'os_script-{version}'
+artifacts = file_list_sort_by_name(find(dist_dir, f'{prefix}*'))
+artifacts = [
+    path for path in artifacts
+    if path.name == f'{prefix}.tar.gz' or path.name.startswith(prefix + '-')
+]
+wheel_files = [path for path in artifacts if path.suffix == '.whl']
 
+# Install the wheel just built, replacing any older copy already present in this environment.
 if wheel_files:
     wheel_file = wheel_files[0]
     print(f'Installing version: {wheel_file}')
-    run_checked(f'"{sys.executable}" -m pip install "{wheel_file}" --force-reinstall')
+    run_checked(f'"{py}" -m pip install "{wheel_file}" --force-reinstall')
 else:
     print(f'Wheel file matching os_script-{version}-*.whl not found in {dist_dir}')
     exit(1)
 
+# Upload those same files only when asked. PyPI keeps every uploaded version, so older files in dist/ must not be sent again.
 if args.public:
-    artifacts = file_list_sort_by_name(find(dist_dir, f'os_script-{version}-*'))
     if not artifacts:
         print(f'No distribution files for version {version} in {dist_dir}')
         exit(1)
     print('Uploading to PyPI:', ', '.join(str(path) for path in artifacts))
-    run_checked(f'"{sys.executable}" -m pip install twine')
+    run_checked(f'"{py}" -m pip install twine')
     quoted = ' '.join(f'"{path}"' for path in artifacts)
-    run_checked(f'"{sys.executable}" -m twine upload {quoted}')
+    run_checked(f'"{py}" -m twine upload {quoted}')

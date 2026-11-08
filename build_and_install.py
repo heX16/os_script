@@ -1,8 +1,10 @@
-# Note: For obvious reasons, this file does not use `os_script` library functions.
+# Release script that does not import os_script, so a broken library can still be packaged.
 
 import argparse
-import subprocess
+import os
 import re
+import subprocess
+import sys
 from pathlib import Path
 
 parser = argparse.ArgumentParser(
@@ -15,20 +17,26 @@ parser.add_argument(
 )
 args = parser.parse_args()
 
-# Path to the target Python file
-file_path = Path('os_script/os_script.py')
 
-# Read all lines from the file
+def run_checked(command: list[str]) -> None:
+    """A failed build or upload must stop the release."""
+    result = subprocess.run(command)
+    if result.returncode != 0:
+        print(f'Command failed ({result.returncode}): {command}')
+        exit(result.returncode)
+
+
+# Commands below use paths relative to the repository, not to the caller's working directory.
+repo_root = Path(__file__).resolve().parent
+os.chdir(repo_root)
+
+# The version users see is os_script_version(). pyproject.toml must carry the same value, because pip and PyPI read it from there.
+file_path = Path('os_script/os_script.py')
 lines = file_path.read_text().splitlines()
 
 try:
-    # Find the index of the target function definition
     index = lines.index('def os_script_version():')
-    # Get the line immediately following the target line
     version_line = lines[index + 1]
-
-    # Regular expression to extract the version number
-    # Example: `return '0.2.5'` -> `0.2.5`
     match = re.search(r"return\s+'([\d.]+)'", version_line)
     if match:
         version = match.group(1)
@@ -44,23 +52,16 @@ except Exception as e:
     print(f'Error: {e}')
     exit(1)
 
-# Path to the pyproject.toml file
+# Write that version into pyproject.toml only when it differs, so a rerun does not touch the file for no reason.
 pyproject_path = Path('pyproject.toml')
-
-# Read the pyproject.toml file
 pyproject_text = pyproject_path.read_text()
 
-# Regular expression to find the version line in pyproject.toml
 version_pattern = re.compile(r'version\s*=\s*"([\d.]+)"')
-
-# Find the current version in pyproject.toml
 current_version_match = version_pattern.search(pyproject_text)
 if current_version_match:
     current_version = current_version_match.group(1)
     if version != current_version:
-        # Replace the current version with the new version
         updated_pyproject_text = version_pattern.sub(f'version = "{version}"', pyproject_text)
-        # Write the updated content back to pyproject.toml
         pyproject_path.write_text(updated_pyproject_text)
         print(f'Updated pyproject.toml from {current_version} to {version} version.')
     else:
@@ -69,28 +70,36 @@ else:
     print('Version line not found in pyproject.toml')
     exit(1)
 
-# Extract the updated version from pyproject.toml
+# Build with the interpreter that runs this script. `pip` and `python` on PATH may be a different installation.
+py = sys.executable
+run_checked([py, '-m', 'pip', 'install', 'build'])
+run_checked([py, '-m', 'build'])
+
+# This version only. A bare prefix such as `0.5.8*` would also match `0.5.80`.
+# The sdist is `name-version.tar.gz`; wheels are `name-version-...whl`.
 dist_dir = Path('dist')
-wheel_file = dist_dir / f'os_script-{version}-py3-none-any.whl'
+prefix = f'os_script-{version}'
+artifacts = sorted(dist_dir.glob(f'{prefix}*'), key=lambda path: path.name.lower())
+artifacts = [
+    path for path in artifacts
+    if path.name == f'{prefix}.tar.gz' or path.name.startswith(prefix + '-')
+]
+wheel_files = [path for path in artifacts if path.suffix == '.whl']
 
-# Build the project
-subprocess.run(['pip', 'install', 'build'], check=True)
-subprocess.run(['python', '-m', 'build'], check=True)
-
-# Check if the wheel file exists
-if wheel_file.exists():
+# Install the wheel just built, replacing any older copy already present in this environment.
+if wheel_files:
+    wheel_file = wheel_files[0]
     print(f'Installing version: {wheel_file}')
-    # Install the wheel file
-    subprocess.run(['pip', 'install', str(wheel_file), '--force-reinstall'], check=True)
+    run_checked([py, '-m', 'pip', 'install', str(wheel_file), '--force-reinstall'])
 else:
-    print(f'Wheel file {wheel_file} not found in {dist_dir}')
+    print(f'Wheel file matching os_script-{version}-*.whl not found in {dist_dir}')
     exit(1)
 
+# Upload those same files only when asked. PyPI keeps every uploaded version, so older files in dist/ must not be sent again.
 if args.public:
-    artifacts = sorted(str(path) for path in dist_dir.glob(f'os_script-{version}*'))
     if not artifacts:
         print(f'No distribution files for version {version} in {dist_dir}')
         exit(1)
-    print('Uploading to PyPI:', ', '.join(artifacts))
-    subprocess.run(['pip', 'install', 'twine'], check=True)
-    subprocess.run(['python', '-m', 'twine', 'upload', *artifacts], check=True)
+    print('Uploading to PyPI:', ', '.join(str(path) for path in artifacts))
+    run_checked([py, '-m', 'pip', 'install', 'twine'])
+    run_checked([py, '-m', 'twine', 'upload', *[str(path) for path in artifacts]])
