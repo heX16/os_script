@@ -1096,6 +1096,60 @@ def get_file_perm(p: Path | str) -> str:
     return oct(p.stat().st_mode)[-3:]
 
 
+def ensure_path_exists(raw: str | Path) -> Path:
+    """
+    Normalize and validate a user-provided filesystem path value.
+
+    This helper is useful when a path can come from different sources
+    (CLI args, configs, API calls). It converts the value to an absolute
+    `Path`, expands `~`, and then verifies that the path exists.
+
+    Special rule:
+        - If the input is a string that ends with '/' or '\\', the path is
+          required to be a directory.
+
+    Notes:
+        - An empty/whitespace-only string is treated as invalid input.
+        - A `Path` object does not preserve a trailing separator, so the
+          "require directory" rule applies only to string inputs.
+
+    Raises:
+        TypeError: If `raw` is not a `str` or `Path`.
+        ValueError: If `raw` is an empty or whitespace-only string.
+        FileNotFoundError: If the path does not exist.
+        NotADirectoryError: If a string path ends with a separator and the
+            path is not a directory.
+    """
+    require_directory = False
+
+    if isinstance(raw, Path):
+        path = raw.expanduser().absolute()
+    else:
+        if not isinstance(raw, str):
+            raise TypeError(f'Path must be str or Path, got: {type(raw).__name__}.')
+
+        value = raw.strip()
+        if not value:
+            raise ValueError('Path is empty.')
+
+        # Use OS-defined separators instead of hardcoding '/\\'.
+        # On Windows: os.sep == '\\', os.altsep == '/'.
+        # On POSIX: os.sep == '/', os.altsep is usually None.
+        separators = [os.sep]
+        if os.altsep:
+            separators.append(os.altsep)
+        require_directory = value.endswith(tuple(separators))
+        path = Path(value).expanduser().absolute()
+
+    if not path.exists():
+        raise FileNotFoundError(f'The path {path} does not exist.')
+
+    if require_directory and not path.is_dir():
+        raise NotADirectoryError(f'The path {path} is not a directory.')
+
+    return path
+
+
 def get_current_dir() -> Path:
     """
     Get the current working directory as a `Path` object.

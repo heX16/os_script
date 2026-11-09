@@ -30,6 +30,7 @@
 
 - `find`
 - `find_dir`
+- `ensure_path_exists`
 - `check_ext`
 - `get_filename`
 - `get_file_size`
